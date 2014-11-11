@@ -64,7 +64,6 @@
               </tbody>
             </table>
      
-     
     </div><!-- 行结束 -->
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="jquery/jquery-1.11.1.js"></script>
@@ -76,8 +75,8 @@
     			if(window.console){
     				console.log('poll');
     			}
-    			$.post('',function(data){
-    				
+    			$.post('/ssh/poll',function(data){
+    				console.log(data);
     			});
     		});
     	});
