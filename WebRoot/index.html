@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>主机信息采集页</title>
+
+    <!-- Bootstrap -->
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="js/html5css3comp/html5shiv.min.js"></script>
+      <script src="js/html5css3comp/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+  	<div class="container">
+  	
+  	<div class="page-header">
+  		<h1>主机性能信息 <small>物理机</small></h1>
+	</div>
+    <p>
+  		<button id="poll" class="btn btn-large btn-primary" type="button">执&nbsp;&nbsp;行</button>
+  		<button id="export" class="btn btn-large btn-primary pull-right" type="button">导&nbsp;&nbsp;出</button>
+	</p>
+
+	<table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>序&nbsp;号</th>
+                  <th>业务名称</th>
+                  <th>IP地址</th>
+                  <th>详细信息</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>Mark</td>
+                  <td>Otto</td>
+                  <td>@mdo</td>
+                </tr>
+                <tr>
+                <td>Mark</td>
+                  <td>Mark</td>
+                  <td>Otto</td>
+                  <td>@TwBootstrap</td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>Jacob</td>
+                  <td>Thornton</td>
+                  <td>@fat</td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>Larry the Bird</td>
+                  <td>@twitter</td>
+                   <td>@twitter</td>
+                </tr>
+              </tbody>
+            </table>
+     
+     
+    </div><!-- 行结束 -->
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="jquery/jquery-1.11.1.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+    	$(document).ready(function(){
+    		$('#poll').click(function(){
+    			if(window.console){
+    				console.log('poll');
+    			}
+    			$.post('',function(data){
+    				
+    			});
+    		});
+    	});
+    </script>
+  </body>
+</html>
