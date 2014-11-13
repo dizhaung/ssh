@@ -121,7 +121,7 @@ public class Host {
 		this.detail = detail;
 	}
 
-	private class HostDetail{
+	public static class HostDetail{
 		private String os;
 		private String hostType;
 		private String hostName;
@@ -214,11 +214,11 @@ public class Host {
 		private List<FileSystem> fsList;
 		
 		
-		private class NetworkCard {
+		public static class  NetworkCard {
 			
 		}
 		
-		private class FileSystem{
+		public static class FileSystem{
 			
 		}
 	}

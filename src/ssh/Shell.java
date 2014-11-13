@@ -269,7 +269,8 @@ public class Shell {
 			System.out.println(cmdResult);
 			h.setOs(parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult));
 			if("AIX".equalsIgnoreCase(h.getOs())){
-				/*//获取主机型号
+				/*
+				 //获取主机型号
 				shell.executeCommands(new String[] { "uname -M" });
 				cmdResult = shell.getResponse();
 				
