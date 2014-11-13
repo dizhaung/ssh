@@ -7,6 +7,8 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.apache.oro.text.regex.MalformedPatternException;
@@ -31,9 +33,9 @@ public class Shell {
     
     private Session session;
     private ChannelShell channel;
-    private static Expect4j expect = null;
+    private  Expect4j expect = null;
     private static final long defaultTimeOut = 1000;
-    public static StringBuffer buffer=new StringBuffer();
+    public  StringBuffer buffer= null;
     
     public static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
     public static final String BACKSLASH_R = "\r";
@@ -43,7 +45,7 @@ public class Shell {
     public static final int SSH_PORT = 22;
     
     public static String[] linuxPromptRegEx = new String[] { "~]#", "~#", "#",
-            ":~#", "/$", ">" };
+            ":~#", "/$", ">","\\$" };
     
     public static String[] errorMsg=new String[]{"could not acquire the config lock "};
     
@@ -82,6 +84,8 @@ public class Shell {
             session.setPassword(password);
             Hashtable<String, String> config = new Hashtable<String, String>();
             config.put("StrictHostKeyChecking", "no");
+            config.put("PreferredAuthentications", 
+                    "publickey,keyboard-interactive,password");
             session.setConfig(config);
             localUserInfo ui = new localUserInfo();
             session.setUserInfo(ui);
@@ -103,7 +107,7 @@ public class Shell {
         if(expect==null){
             return false;
         }
-        
+        buffer = new StringBuffer();
         log.debug("----------Running commands are listed as follows:----------");
         for(String command:commands){
             log.debug(command);
@@ -112,11 +116,13 @@ public class Shell {
         
         Closure closure = new Closure() {
             public void run(ExpectState expectState) throws Exception {
-            	System.out.println(expectState.getBuffer());
+            	//匹配到模式串的情况下，例如：#等等待输入命令的提示符时，输出执行的命令和返回的信息
+            	//System.out.println(expectState.getBuffer());
                 buffer.append(expectState.getBuffer());// buffer is string
                                                         // buffer for appending
                                                         // output of executed
                                                         // command
+              
                 expectState.exp_continue();
                 
             }
@@ -176,7 +182,7 @@ public class Shell {
             boolean isFailed = checkResult(expect.expect(objPattern));
             if (!isFailed) {
                 expect.send(strCommandPattern);
-                expect.send("\r");
+                expect.send("\n");
                 return true;
             }
             return false;
@@ -258,11 +264,90 @@ public class Shell {
 			shell.executeCommands(new String[] { "uname" });
 			// }
 
-			shell.getResponse();
-
+			String cmdResult = shell.getResponse();
+			//获取操作系统的类型
+			System.out.println(cmdResult);
+			h.setOs(parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult));
+			if("AIX".equalsIgnoreCase(h.getOs())){
+				/*//获取主机型号
+				shell.executeCommands(new String[] { "uname -M" });
+				cmdResult = shell.getResponse();
+				
+				System.out.print(parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult));
+				
+				
+				//获取主机名
+				shell.executeCommands(new String[] { "uname -n" });
+				cmdResult = shell.getResponse();
+				
+				System.out.print(parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult));
+				
+				//获取系统版本号
+				
+				shell.executeCommands(new String[] { "uname -v" });
+				cmdResult = shell.getResponse();
+				
+				String version = parseInfoByRegex("\\s*uname -v\r\n(.*)\r\n",cmdResult);
+				
+				shell.executeCommands(new String[] { "uname -r" });
+				cmdResult = shell.getResponse();
+				
+				System.out.print(version+"."+parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult));
+				*/
+				//获取内存大小
+				shell.executeCommands(new String[] { "prtconf |grep \"Good Memory Size:\"" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				System.out.print("内存大小"+parseInfoByRegex("\\s*prtconf \\|grep \"Good Memory Size:\"\r\n(.*)\r\n",cmdResult));
+				
+				/*//获取CPU个数
+				shell.executeCommands(new String[] { "prtconf |grep \"Number Of Processors:\"" });
+				cmdResult = shell.getResponse();
+				
+				System.out.print("CPU个数"+parseInfoByRegex("\\s*prtconf |grep \"Number Of Processors:\"\r\n(.*)\r\n",cmdResult));
+				//获取CPU频率
+				shell.executeCommands(new String[] { "prtconf |grep \"Processor Clock Speed:\"" });
+				cmdResult = shell.getResponse();
+				
+				System.out.print("CPU频率"+parseInfoByRegex("\\s*prtconf |grep \"Processor Clock Speed:\"\r\n(.*)\r\n",cmdResult));
+				
+				//获取CPU核数
+				shell.executeCommands(new String[] { "bindprocessor -q" });
+				cmdResult = shell.getResponse();
+				
+				System.out.print("CPU核数"+parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));
+				
+				//获取网卡信息
+				shell.executeCommands(new String[] { "bindprocessor -q" });
+				cmdResult = shell.getResponse();
+				
+				System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));
+				*/
+				
+			}else if("LINUX".equalsIgnoreCase(h.getOs())){
+				
+			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
+				
+			}
 			shell.disconnect();
 
 		}
     }
-
+    /**
+     * 使用pattern从cmdResult获取必要的信息，若提取不到返回NONE
+     * @param pattern     提取必要信息的模式
+     * @param cmdResult   shell命名执行后返回的结果
+     * @return
+     */
+    public static String parseInfoByRegex(final String pattern,final String cmdResult){
+    	//获取操作系统的类型
+		Matcher m = Pattern.compile(pattern).matcher(cmdResult);
+		if(m.find()){
+			return m.group(1);
+	
+		}else{
+			return "NONE";
+		}
+    	
+    }
 }

@@ -6,6 +6,8 @@ import host.Host;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -34,6 +36,7 @@ public class PollActionServlet extends HttpServlet {
 		
 		String userDir = req.getRealPath("/");
 		List<Host> list = FileManager.getHostList(userDir+"/WEB-INF/classes/config.txt");
+		
 		PrintWriter out = resp.getWriter();
 		JSONArray o = JSONArray.fromObject(list);
 		out.print(o);
@@ -46,7 +49,13 @@ public class PollActionServlet extends HttpServlet {
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-
+		String s = "# prtconf |grep \"Good Memory Size:\"\r\nGood Memory Size: 32000 MB\r\n#";	
+		Matcher m = Pattern.compile("\\s*prtconf \\|grep \"Good Memory Size:\"\r\n(.*)\r\n").matcher(s);
+		if(m.find()){
+			System.out.println(m.group(1));
+		}
+		System.out.print(s);
 	}
-
+		
+		
 }
