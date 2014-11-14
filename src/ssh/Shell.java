@@ -266,6 +266,7 @@ public class Shell {
 
 			String cmdResult = shell.getResponse();
 			//获取操作系统的类型
+			
 			System.out.println(cmdResult);
 			h.setOs(parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult));
 			if("AIX".equalsIgnoreCase(h.getOs())){
@@ -296,11 +297,11 @@ public class Shell {
 				System.out.print(version+"."+parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult));
 				*/
 				//获取内存大小
-				shell.executeCommands(new String[] { "prtconf |grep \"Good Memory Size:\"" });
+				/*shell.executeCommands(new String[] { "prtconf |grep \"Good Memory Size:\"" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
 				System.out.print("内存大小"+parseInfoByRegex("\\s*prtconf \\|grep \"Good Memory Size:\"\r\n(.*)\r\n",cmdResult));
-				
+				*/
 				/*//获取CPU个数
 				shell.executeCommands(new String[] { "prtconf |grep \"Number Of Processors:\"" });
 				cmdResult = shell.getResponse();
@@ -326,6 +327,71 @@ public class Shell {
 				*/
 				
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
+				/*//CPU个数
+				shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
+				cmdResult = shell.getResponse();
+				
+				System.out.print(parseInfoByRegex("\\s+(\\d+)\\s+",cmdResult));
+				
+				//CPU核数
+				shell.executeCommands(new String[] { "cat /proc/cpuinfo | grep \"cpu cores\"" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				System.out.print(parseLogicalCPUNumber("cpu\\s+cores\\s+:\\s+(\\d+)\\s*",cmdResult));
+				
+				//CPU主频
+				shell.executeCommands(new String[] { "dmidecode -s processor-frequency" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				System.out.print(cmdResult.split("[\r\n]+")[1]);
+				
+				//操作系统版本
+				shell.executeCommands(new String[] { "lsb_release -a |grep \"Description\"" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				System.out.print(parseInfoByRegex("[Dd]escription:\\s+(.+)",cmdResult));
+				
+				//主机型号
+				shell.executeCommands(new String[] { "dmidecode -s system-manufacturer" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				String manufacturer = cmdResult.split("[\r\n]+")[1].trim();
+				
+				shell.executeCommands(new String[] { "dmidecode -s system-product-name" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+			
+				System.out.print(manufacturer+" "+cmdResult.split("[\r\n]+")[1].trim());
+				
+				//内存大小
+				shell.executeCommands(new String[] { "free -m" });
+				cmdResult = shell.getResponse();
+				
+				System.out.println(cmdResult.split("[\r\n]+")[2].trim().split("\\s+")[1].trim());
+				*/
+				
+				//获取挂载点信息
+				shell.executeCommands(new String[] { "df -m" });
+				cmdResult = shell.getResponse();
+				
+				String[] diskFSEntries = cmdResult.split("\n");
+							//滤掉磁盘信息的表格头
+				List<Host.HostDetail.FileSystem> fsList = new ArrayList();
+				for(int i = 2,size = diskFSEntries.length-1;i<size;i++){
+					String[] entry = diskFSEntries[i].split("\\s+");
+					
+					if(entry!=null && entry.length == 6){
+						Host.HostDetail.FileSystem fs = new Host.HostDetail.FileSystem();
+						
+						fs.setMountOn(entry[5]);
+						fs.setBlocks(entry[1]+" MB");
+						fs.setUsed(entry[4]);
+						
+						fsList.add(fs);
+						System.out.println(fs);
+					}
+					
+				}
 				
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
@@ -333,6 +399,26 @@ public class Shell {
 			shell.disconnect();
 
 		}
+    }
+   
+    
+    /**
+     * 获取CPU核数
+     * @author HP
+     * @param pattern
+     * @param cmdResult
+     * @return
+     */
+    public static String parseLogicalCPUNumber(final String pattern,final String cmdResult){
+    	//获取
+    	Matcher m = Pattern.compile(pattern).matcher(cmdResult);
+    			int number = 0;
+    			while(m.find()){
+    				number += Integer.parseInt(m.group(1));
+    				
+    			}
+    			return number+"";
+    	    	
     }
     /**
      * 使用pattern从cmdResult获取必要的信息，若提取不到返回NONE

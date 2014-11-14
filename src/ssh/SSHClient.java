@@ -299,23 +299,125 @@ public class SSHClient {
 				
 				String[] diskFSEntries = cmdResult.split("\n");
 				//滤掉磁盘信息的表格头
+				List<Host.HostDetail.FileSystem> fsList = new ArrayList();
 				for(int i = 2,size = diskFSEntries.length-1;i<size;i++){
 					String[] entry = diskFSEntries[i].split("\\s+");
 					
 					if(entry!=null && entry.length == 7){
-						System.out.println(entry[0]);
+						Host.HostDetail.FileSystem fs = new Host.HostDetail.FileSystem();
+						
+						fs.setMountOn(entry[6]);
+						fs.setBlocks(entry[1]+" MB");
+						fs.setUsed(entry[3]);
+						
+						fsList.add(fs);
+						System.out.println(fs);
 					}
 					
 				}
-				
+				hostDetail.setFsList(fsList);
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				
+				
+				Host.HostDetail hostDetail = new Host.HostDetail();
+				h.setDetail(hostDetail);
+				hostDetail.setOs(h.getOs());//主机详细信息页的操作系统类型
+				
+				
+				
+				//获取主机型号
+				shell.executeCommands(new String[] { "dmidecode -s system-manufacturer" });
+				cmdResult = shell.getResponse();
+				String manufacturer = cmdResult.split("[\r\n]+")[1].trim();
+				
+				shell.executeCommands(new String[] { "dmidecode -s system-product-name" });
+				cmdResult = shell.getResponse();
+				hostDetail.setHostType(manufacturer+" "+cmdResult.split("[\r\n]+")[1].trim());
+				//获取主机名
+				shell.executeCommands(new String[] { "uname -n" });
+				cmdResult = shell.getResponse();
+				
+				System.out.print(parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult));
+				hostDetail.setHostName(parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult));
+				//获取系统版本号
+				shell.executeCommands(new String[] { "lsb_release -a |grep \"Description\"" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				hostDetail.setOsVersion(parseInfoByRegex("[Dd]escription:\\s+(.+)",cmdResult));
+				
+				//CPU个数
+				shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
+				cmdResult = shell.getResponse();
+				
+				hostDetail.setCPUNumber(parseInfoByRegex("\\s+(\\d+)\\s+",cmdResult));
+				
+				//CPU核数
+				shell.executeCommands(new String[] { "cat /proc/cpuinfo | grep \"cpu cores\"" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				hostDetail.setLogicalCPUNumber(parseLogicalCPUNumber("cpu\\s+cores\\s+:\\s+(\\d+)\\s*",cmdResult));
+				
+				//CPU主频
+				shell.executeCommands(new String[] { "dmidecode -s processor-frequency" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				hostDetail.setCPUClockSpeed(cmdResult.split("[\r\n]+")[1]);
+				
+				//内存大小
+				shell.executeCommands(new String[] { "free -m" });
+				cmdResult = shell.getResponse();
+				hostDetail.setMemSize(cmdResult.split("[\r\n]+")[2].trim().split("\\s+")[1].trim()+" MB");
+				
+				//获取挂载点信息
+				shell.executeCommands(new String[] { "df -m" });
+				cmdResult = shell.getResponse();
+				
+				String[] diskFSEntries = cmdResult.split("\n");
+							//滤掉磁盘信息的表格头
+				List<Host.HostDetail.FileSystem> fsList = new ArrayList();
+				for(int i = 2,size = diskFSEntries.length-1;i<size;i++){
+					String[] entry = diskFSEntries[i].split("\\s+");
+					
+					if(entry!=null && entry.length == 6){
+						Host.HostDetail.FileSystem fs = new Host.HostDetail.FileSystem();
+						
+						fs.setMountOn(entry[5]);
+						fs.setBlocks(entry[1]+" MB");
+						fs.setUsed(entry[4]);
+						
+						fsList.add(fs);
+						System.out.println(fs);
+					}
+					
+				}
+				hostDetail.setFsList(fsList);
+				
+				System.out.println(h);
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
 			}
 			shell.disconnect();
 
 		}
+    }
+    
+    /**
+     * 获取CPU核数
+     * @author HP
+     * @param pattern
+     * @param cmdResult
+     * @return
+     */
+    public static String parseLogicalCPUNumber(final String pattern,final String cmdResult){
+    	//获取
+    	Matcher m = Pattern.compile(pattern).matcher(cmdResult);
+    			int number = 0;
+    			while(m.find()){
+    				number += Integer.parseInt(m.group(1));
+    				
+    			}
+    			return number+"";
+    	    	
     }
     /**
      * 采用标准提示符匹配的正则和特殊正则来构造
