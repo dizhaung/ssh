@@ -93,25 +93,17 @@ public class Host {
 	public void setHostType(String hostType) {
 		this.hostType = hostType;
 	}
+	
+		
 	@Override
 	public String toString() {
-		// TODO Auto-generated method stub
-		StringBuffer sb = new StringBuffer();
-		sb.append(this.getBuss());
-		sb.append("|");
-		sb.append(this.getIp());
-		sb.append("|");
-		sb.append(this.getJkUser());
-		sb.append("|");
-		sb.append(this.getJkUserPassword());
-		sb.append("|");
-		
-		sb.append(this.getRootUser());
-		sb.append("|");
-		sb.append(this.getRootUserPassword());
-		return sb.toString();
+		return "Host [buss=" + buss + ", ip=" + ip + ", rootUser=" + rootUser
+				+ ", rootUserPassword=" + rootUserPassword + ", jkUser="
+				+ jkUser + ", jkUserPassword=" + jkUserPassword + ", hostType="
+				+ hostType + ", os=" + os + ", detail=" + detail + "]";
 	}
-		
+
+
 	private HostDetail detail;
 	
 	public HostDetail getDetail() {
@@ -122,6 +114,17 @@ public class Host {
 	}
 
 	public static class HostDetail{
+		
+		@Override
+		public String toString() {
+			return "HostDetail [os=" + os + ", hostType=" + hostType
+					+ ", hostName=" + hostName + ", osVersion=" + osVersion
+					+ ", memSize=" + memSize + ", CPUNumber=" + CPUNumber
+					+ ", CPUClockSpeed=" + CPUClockSpeed
+					+ ", logicalCPUNumber=" + logicalCPUNumber + ", cardList="
+					+ cardList + ", fsList=" + fsList + "]";
+		}
+
 		private String os;
 		private String hostType;
 		private String hostName;
@@ -213,12 +216,46 @@ public class Host {
 		private List<NetworkCard> cardList;
 		private List<FileSystem> fsList;
 		
-		
+		/**
+		 * 网卡
+		 * @author HP
+		 *
+		 */
 		public static class  NetworkCard {
 			
 		}
-		
+		/**
+		 * 文件系统
+		 * @author HP
+		 *
+		 */
 		public static class FileSystem{
+			private String mountOn;
+			private String blocks;
+			private String used;
+			public String getMountOn() {
+				return mountOn;
+			}
+			public void setMountOn(String mountOn) {
+				this.mountOn = mountOn;
+			}
+			public String getBlocks() {
+				return blocks;
+			}
+			public void setBlocks(String blocks) {
+				this.blocks = blocks;
+			}
+			public String getUsed() {
+				return used;
+			}
+			public void setUsed(String used) {
+				this.used = used;
+			}
+			@Override
+			public String toString() {
+				return "FileSystem [mountOn=" + mountOn + ", blocks=" + blocks
+						+ ", used=" + used + "]";
+			}
 			
 		}
 	}
