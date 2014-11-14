@@ -54,11 +54,15 @@ public class PollActionServlet extends HttpServlet {
 	 */
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		String s = "# prtconf |grep \"Good Memory Size:\"\r\nGood Memory Size: 32000 MB\r\n#";	
-		Matcher m = Pattern.compile("\\s*prtconf \\|grep \"Good Memory Size:\"\r\n(.*)\r\n").matcher(s);
+		String s = "# prtconf |grep \"Good Memory Size:\"\r\nGood Memory Sooe: 32000 MB\r\n#";	
+		Matcher m = Pattern.compile("S\\w{2}").matcher(s);
 		if(m.find()){
-			System.out.println(m.group(1));
+			System.out.println(m.group(0));
 		}
+		if(m.find()){
+			System.out.println(m.group(0));
+		}
+		
 		System.out.print(s);
 	}
 		

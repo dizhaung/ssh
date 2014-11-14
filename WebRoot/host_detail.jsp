@@ -43,6 +43,7 @@
 	<table class="table table-striped">
               <%
               	Host.HostDetail hostDetail = host.getDetail();
+              	List<Host.HostDetail.FileSystem> fsList = host.getDetail().getFsList();
               %>
               <tbody>
                 <tr>
@@ -55,10 +56,9 @@
                 <tr>
                 
                   <td>主机名:<%=hostDetail.getHostName() %></td>
-                  <td>主机操作系统版本:<%=hostDetail.getOsVersion() %></td>
-                  <td></td>
-                  <td>
-                   </td>
+                  <td colspan="3">主机操作系统版本:<%=hostDetail.getOsVersion() %></td>
+                
+                  
                 </tr>
                 <tr>
               
@@ -133,23 +133,22 @@
                 </tr>
               </thead>
               <tbody>
+              <%
+              int index = 1;
+              	for(Host.HostDetail.FileSystem fs : fsList){
+              		
+              	
+              %>
                 <tr>
-                  <td>主机类型:IBM</td>
-                  <td>操作系统:AIX</td>
-                  <td>服务器IP</td>
-                  <td>
-                   </td>
+                <td><%=index++ %></td>
+                  <td><%=fs.getMountOn() %></td>
+                  <td><%=fs.getBlocks() %></td>
+                  <td><%=fs.getUsed() %></td>
+                  
                 </tr>
-                <tr>
-                
-                  <td>主机名:OA</td>
-                  <td>主机操作系统版本:6.1</td>
-                  <td></td>
-                  <td>
-                   </td>
-                </tr>
-          
-                
+                <%
+              		}
+                %>
                 
                 </tbody>
             </table>
@@ -162,29 +161,5 @@
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script src="bootstrap/js/bootstrap.min.js"></script>
     <script src="js/json/json_parse.js"></script>
-    
-    <script type="text/javascript">
-    	$(document).ready(function(){
-    		$('#poll').click(function(){
-    			if(window.console){
-    				console.log('poll');
-    			}
-    			$.post('/ssh/poll',function(data){
-    				data = JSON.parse(data);
-    				for(var i = 0;i<data.length;i++){
-    					var tr = $('<tr></tr>');
-    					tr.appendTo('table tbody');
-    					$('<td></td>').text(i+1).appendTo(tr);
-    					$('<td></td>').text(data[i].buss).appendTo(tr);
-    					$('<td></td>').text(data[i].ip).appendTo(tr);
-    					$('<td></td>').html('<a href="####">详细信息</a>').appendTo(tr);
-        				
-        				
-    				}
-    				
-    			});
-    		});
-    	});
-    </script>
   </body>
 </html>
