@@ -39,14 +39,7 @@
                 </tr>
               </thead>
               <tbody>
-                 <tr>
-                  <td>1</td>
-                  <td>Mark</td>
-                  <td>Otto</td>
-                  <td>@mdo</td>
-                  <td>Mark</td>
-                  <td>Mark</td>
-                </tr>
+             
                
               </tbody>
             </table>
@@ -69,10 +62,12 @@
     				for(var i = 0;i<data.length;i++){
     					var tr = $('<tr></tr>');
     					tr.appendTo('table tbody');
-    					$('<td></td>').text(i+1).appendTo(tr);
-    					$('<td></td>').text(data[i].buss).appendTo(tr);
-    					$('<td></td>').text(data[i].ip).appendTo(tr);
-    					$('<td></td>').html('<a href="####">详细信息</a>').appendTo(tr);
+    					$('<td></td>').text(i+1).appendTo(tr);//序号
+    					$('<td></td>').text(data[i].buss).appendTo(tr);//业务名称
+    					$('<td></td>').text(data[i].ip).appendTo(tr);//IP
+    					$('<td></td>').text(data[i].os).appendTo(tr);//系统
+    					$('<td></td>').text('').appendTo(tr);//类型（数据库服务器or应用服务器）
+    					$('<td></td>').html('<a href="host_detail.jsp?ip='+data[i].ip+'">详细信息</a>').appendTo(tr);//详细信息
         				
         				
     				}

@@ -1,10 +1,27 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+    <%@ page import="java.util.List" %>
+    <%@ page import="host.Host" %>
+    <%
+    String ip = request.getParameter("ip");
+    if(ip==null) return;
+    List<Host> list =(List<Host>)request.getSession().getServletContext().getAttribute("host");
+    Host host = null;
+    //查找是这个IP的主机
+    for(Host h : list){
+    	if(ip.trim().endsWith(h.getIp().trim())){
+    		host = h;
+    		break;
+    	}
+    }
+    %>
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>主机信息采集页</title>
+    <title><%=host.getBuss() %>信息采集页</title>
 
     <!-- Bootstrap -->
     <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -20,32 +37,25 @@
   	<div class="container">
   	
   	<div class="page-header">
-  		<h1>网管服务器的基本信息 <small>IP:10.204.16.151</small></h1>
+  		<h1><%=host.getBuss() %>的基本信息 <small>IP:<%=ip %></small></h1>
 	</div>
     
 	<table class="table table-striped">
-              <!-- <thead>
-                <tr>
-                  <th>序&nbsp;号</th>
-                  <th>业务名称</th>
-                  <th>IP地址</th>
-                  <th>系统</th>
-                  <th>类型</th>
-                  <th>详细信息</th>
-                </tr>
-              </thead> -->
+              <%
+              	Host.HostDetail hostDetail = host.getDetail();
+              %>
               <tbody>
                 <tr>
-                  <td>主机类型:IBM</td>
-                  <td>操作系统:AIX</td>
-                  <td>服务器IP</td>
+                  <td>主机类型:<%=hostDetail.getHostType() %></td>
+                  <td>操作系统:<%=hostDetail.getOs() %></td>
+                  <td>服务器IP:<%=ip %></td>
                   <td>
                    </td>
                 </tr>
                 <tr>
                 
-                  <td>主机名:OA</td>
-                  <td>主机操作系统版本:6.1</td>
+                  <td>主机名:<%=hostDetail.getHostName() %></td>
+                  <td>主机操作系统版本:<%=hostDetail.getOsVersion() %></td>
                   <td></td>
                   <td>
                    </td>
@@ -72,12 +82,12 @@
                 </tr>
                 <tr>
                  
-                  <td>内存大小:</td>
-                  <td>CPU个数</td>
+                  <td>内存大小:<%=hostDetail.getMemSize() %></td>
+                  <td>CPU个数:<%=hostDetail.getCPUNumber() %></td>
                    <td>
-                   CPU主频:</td>
+                   CPU主频:<%=hostDetail.getCPUClockSpeed() %></td>
                     <td>
-                    CPU核数:</td>
+                    CPU核数:<%=hostDetail.getLogicalCPUNumber() %></td>
                 </tr>
               </tbody>
             </table><!-- 内存等表格 -->
