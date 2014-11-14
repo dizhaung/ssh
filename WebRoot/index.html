@@ -54,6 +54,14 @@
     <script type="text/javascript">
     	$(document).ready(function(){
     		$('#poll').click(function(){
+    			
+    			var that = this;
+    			//单击执行按钮进入采集过程，这个过程中所有按钮不能操作
+    			this.disabled = true
+    			exportButton.attr('disabled',true);
+    			//将上一次采集到的主机表格清空
+    			var tBody = $('table tbody');
+    			tBody.html('');
     			if(window.console){
     				console.log('poll');
     			}
@@ -61,18 +69,23 @@
     				data = JSON.parse(data);
     				for(var i = 0;i<data.length;i++){
     					var tr = $('<tr></tr>');
-    					tr.appendTo('table tbody');
+    					tr.appendTo(tBody);
     					$('<td></td>').text(i+1).appendTo(tr);//序号
     					$('<td></td>').text(data[i].buss).appendTo(tr);//业务名称
     					$('<td></td>').text(data[i].ip).appendTo(tr);//IP
     					$('<td></td>').text(data[i].os).appendTo(tr);//系统
     					$('<td></td>').text('').appendTo(tr);//类型（数据库服务器or应用服务器）
-    					$('<td></td>').html('<a href="host_detail.jsp?ip='+data[i].ip+'">详细信息</a>').appendTo(tr);//详细信息
+    					$('<td></td>').html('<a target="_blank" href="host_detail.jsp?ip='+data[i].ip+'">详细信息</a>').appendTo(tr);//详细信息
         				
         				
     				}
-    				
+    				//采集完毕，恢复按钮
+    				that.disabled = false;
+    				exportButton.attr('disabled',false)
     			});
+    		});
+    		var exportButton  = $('#export').click(function(){
+    			this.disabled = true;
     		});
     	});
     </script>
