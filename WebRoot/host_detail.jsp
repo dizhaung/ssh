@@ -43,7 +43,7 @@
 	<table class="table table-striped">
               <%
               	Host.HostDetail hostDetail = host.getDetail();
-              	List<Host.HostDetail.FileSystem> fsList = host.getDetail().getFsList();
+        
               %>
               <tbody>
                 <tr>
@@ -97,26 +97,28 @@
      <table class="table table-bordered table-hover">
       <thead>
                 <tr>
-                  <th>网卡序号</th>
+                  <th>序号</th>
+				  <th>网卡名称</th>
                   <th>网卡类型</th>
                   
                 </tr>
               </thead>
               <tbody>
+              <%
+              	int i = 1;
+              	List<Host.HostDetail.NetworkCard> cardList = hostDetail.getCardList();
+              	for(Host.HostDetail.NetworkCard card : cardList){
+              		
+              %>
                 <tr>
-                  <td>主机类型:IBM</td>
-                  <td>操作系统:AIX</td>
-                  
+                  <td><%=i++ %></td>
+                  <td><%=card.getCardName() %></td>
+                  <td><%=card.getIfType() %></td>
                 </tr>
-                <tr>
                 
-                  <td>主机名:OA</td>
-                  <td>主机操作系统版本:6.1</td>
-                  
-                </tr>
-          
-                
-                
+            <%
+              	}
+            %>
                 </tbody>
             </table>
      </div>
@@ -135,6 +137,7 @@
               <tbody>
               <%
               int index = 1;
+              List<Host.HostDetail.FileSystem> fsList = host.getDetail().getFsList();
               	for(Host.HostDetail.FileSystem fs : fsList){
               		
               	
