@@ -222,7 +222,25 @@ public class Host {
 		 *
 		 */
 		public static class  NetworkCard {
-			
+			private String cardName;
+			private String ifType;
+			@Override
+			public String toString() {
+				return "NetworkCard [cardName=" + cardName + ", ifType="
+						+ ifType + "]";
+			}
+			public String getCardName() {
+				return cardName;
+			}
+			public void setCardName(String cardName) {
+				this.cardName = cardName;
+			}
+			public String getIfType() {
+				return ifType;
+			}
+			public void setIfType(String ifType) {
+				this.ifType = ifType;
+			}
 		}
 		/**
 		 * 文件系统

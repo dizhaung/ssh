@@ -291,6 +291,22 @@ public class SSHClient {
 				
 				
 				//获取网卡信息
+				shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
+				cmdResult = shell.getResponse();
+				String[] ents = cmdResult.split("[\r\n]+");
+				List<Host.HostDetail.NetworkCard> cardList = new ArrayList<Host.HostDetail.NetworkCard>();
+				///数组中第一个元素是输入的命令  最后一个元素是命令执行之后的提示符，过滤掉不予解析
+				for(int i = 1,size = ents.length;i<size-1;i++){
+					//提取网卡的名字
+					Host.HostDetail.NetworkCard card = new Host.HostDetail.NetworkCard();
+					card.setCardName(parseInfoByRegex("^(ent\\d+)",ents[i]));
+					
+					//提取网卡的类型（光口 or 电口）
+					card.setIfType(ents[i].indexOf("-SX")== -1?"电口":"光口");//带有-SX为光口
+					cardList.add(card);
+				}
+				hostDetail.setCardList(cardList);
+				
 				
 				//获取挂载点信息
 				cmdsToExecute = new ArrayList<String>();
@@ -368,6 +384,10 @@ public class SSHClient {
 				cmdResult = shell.getResponse();
 				hostDetail.setMemSize(cmdResult.split("[\r\n]+")[2].trim().split("\\s+")[1].trim()+" MB");
 				
+				//获取网卡信息
+				
+				
+				
 				//获取挂载点信息
 				shell.executeCommands(new String[] { "df -m" });
 				cmdResult = shell.getResponse();
@@ -392,10 +412,11 @@ public class SSHClient {
 				}
 				hostDetail.setFsList(fsList);
 				
-				System.out.println(h);
+				
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
 			}
+			System.out.println(h);
 			shell.disconnect();
 
 		}

@@ -319,12 +319,27 @@ public class Shell {
 				
 				System.out.print("CPU核数"+parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));
 				
-				//获取网卡信息
+				//获取CPU核数
 				shell.executeCommands(new String[] { "bindprocessor -q" });
 				cmdResult = shell.getResponse();
 				
 				System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));
 				*/
+				
+				//获取网卡信息
+				shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
+				cmdResult = shell.getResponse();
+				String[] ents = cmdResult.split("[\r\n]+");
+				///数组中第一个元素是输入的命令  最后一个元素是命令执行之后的提示符，过滤掉不予解析
+				for(int i = 1,size = ents.length;i<size-1;i++){
+					//提取网卡的名字
+					System.out.print(parseInfoByRegex("^(ent\\d+)",ents[i]));
+					System.out.println(ents[i].indexOf("-SX"));//带有-SX为光口
+					//提取网卡的类型（光口 or 电口）
+					
+				}
+				System.out.println(cmdResult);
+				/*System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));*/
 				
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				/*//CPU个数
@@ -368,7 +383,7 @@ public class Shell {
 				cmdResult = shell.getResponse();
 				
 				System.out.println(cmdResult.split("[\r\n]+")[2].trim().split("\\s+")[1].trim());
-				*/
+				
 				
 				//获取挂载点信息
 				shell.executeCommands(new String[] { "df -m" });
@@ -392,6 +407,7 @@ public class Shell {
 					}
 					
 				}
+				*/
 				
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
