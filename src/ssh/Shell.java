@@ -324,7 +324,7 @@ public class Shell {
 				cmdResult = shell.getResponse();
 				
 				System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));
-				*/
+				
 				
 				//获取网卡信息
 				shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
@@ -339,8 +339,33 @@ public class Shell {
 					
 				}
 				System.out.println(cmdResult);
+				*/
 				/*System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));*/
+				//检测是否安装了Oracle数据库
+				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
+				cmdResult = shell.getResponse();
+				boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
 				
+				//安装有Oracle
+				if(isExist){
+					//找到oracle用户的目录
+					shell.executeCommands(new String[] { "cat /etc/passwd|grep oracle" });
+					cmdResult = shell.getResponse();
+					String oracleUserDir = parseInfoByRegex("::(.+):",cmdResult);
+					
+					//找到oracle的安装目录
+					shell.executeCommands(new String[] { "cat "+oracleUserDir+"/.profile" });
+					cmdResult = shell.getResponse();
+					
+					String oracleHomeDir = parseInfoByRegex("ORACLE_HOME=([^\r\n]+)",cmdResult);
+					System.out.println(oracleHomeDir);
+					oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", parseInfoByRegex("ORACLE_BASE=([^\r\n]+)",cmdResult)):oracleHomeDir;
+					System.out.println(oracleHomeDir);
+					
+					//找到实例名
+					String oracleSid = parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult);
+					System.out.println(oracleSid);
+				}
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				/*//CPU个数
 				shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
@@ -408,7 +433,20 @@ public class Shell {
 					
 				}
 				*/
-				
+				//获取网卡信息
+				shell.executeCommands(new String[] { "ifconfig -a | grep \"^eth\"" });
+				cmdResult = shell.getResponse();
+				String[] eths = cmdResult.split("[\r\n]+");
+				for(int i = 1,size=eths.length-1;i<size;i++){
+					
+							String eth = parseInfoByRegex("^(eth\\d+)",eths[i]);
+					shell.executeCommands(new String[]{"ethtool "+eth+"| grep \"Supported ports\""});
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					String typeStr = parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult);
+					String type = typeStr.indexOf("TP")!=-1?"电口":(typeStr.indexOf("FIBRE")!=-1?"光口":"未知");
+					System.out.println(type);
+				}
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
 			}
