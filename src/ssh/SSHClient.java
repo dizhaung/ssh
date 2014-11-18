@@ -342,7 +342,7 @@ public class SSHClient {
 				
 				
 				//获取主机型号
-				shell.executeCommands(new String[] { "dmidecode -s system-manufacturer" });
+				shell.executeCommands(new String[] { "dmidecode -s system-manufacturer" });//root用户登录
 				cmdResult = shell.getResponse();
 				String manufacturer = cmdResult.split("[\r\n]+")[1].trim();
 				
@@ -386,6 +386,26 @@ public class SSHClient {
 				
 				//获取网卡信息
 				
+				shell.executeCommands(new String[] { "ifconfig -a | grep \"^eth\"" });
+				cmdResult = shell.getResponse();
+				String[] eths = cmdResult.split("[\r\n]+");
+				List<Host.HostDetail.NetworkCard> cardList = new ArrayList<Host.HostDetail.NetworkCard>();
+				if(eths.length>=3){
+					for(int i = 1,size=eths.length-1;i<size;i++){
+						
+						String eth = parseInfoByRegex("^(eth\\d+)",eths[i]);
+						shell.executeCommands(new String[]{"ethtool "+eth+"| grep \"Supported ports\""});
+						cmdResult = shell.getResponse();
+						System.out.println(cmdResult);
+						String typeStr = parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult);
+						String ifType = typeStr.indexOf("TP")!=-1?"电口":(typeStr.indexOf("FIBRE")!=-1?"光口":"未知");
+						Host.HostDetail.NetworkCard card = new Host.HostDetail.NetworkCard();
+						card.setCardName(eth);
+						card.setIfType(ifType);
+						cardList.add(card);
+					}
+					hostDetail.setCardList(cardList);
+				}
 				
 				
 				//获取挂载点信息
