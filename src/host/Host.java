@@ -100,10 +100,13 @@ public class Host {
 		return "Host [buss=" + buss + ", ip=" + ip + ", rootUser=" + rootUser
 				+ ", rootUserPassword=" + rootUserPassword + ", jkUser="
 				+ jkUser + ", jkUserPassword=" + jkUserPassword + ", hostType="
-				+ hostType + ", os=" + os + ", detail=" + detail + "]";
+				+ hostType + ", os=" + os + ", detail=" + detail + ", dList="
+				+ dList + ", mList=" + mList + "]";
 	}
 
-
+	/**
+	 * 主机的详细信息
+	 */
 	private HostDetail detail;
 	
 	public HostDetail getDetail() {
@@ -276,5 +279,152 @@ public class Host {
 			}
 			
 		}
+	}
+	
+	
+	private List<Database> dList;
+	private List<Middleware> mList;
+	
+	public List<Database> getdList() {
+		return dList;
+	}
+	public void setdList(List<Database> dList) {
+		this.dList = dList;
+	}
+	public List<Middleware> getmList() {
+		return mList;
+	}
+	public void setmList(List<Middleware> mList) {
+		this.mList = mList;
+	}
+
+	/**
+	 * 数据库的详细信息
+	 * @author HP
+	 *
+	 */
+	public static class Database{
+		private String type;
+		private String version;
+		private String dbName;
+		private String ip;
+		private String deploymentDir;
+		private String dataFileDir;
+		private List<DataFile> dfList;
+		
+		
+		@Override
+		public String toString() {
+			return "Database [type=" + type + ", version=" + version
+					+ ", dbName=" + dbName + ", ip=" + ip + ", deploymentDir="
+					+ deploymentDir + ", dataFileDir=" + dataFileDir
+					+ ", dfList=" + dfList + "]";
+		}
+
+
+		public String getType() {
+			return type;
+		}
+
+
+		public void setType(String type) {
+			this.type = type;
+		}
+
+
+		public String getVersion() {
+			return version;
+		}
+
+
+		public void setVersion(String version) {
+			this.version = version;
+		}
+
+
+		public String getDbName() {
+			return dbName;
+		}
+
+
+		public void setDbName(String dbName) {
+			this.dbName = dbName;
+		}
+
+
+		public String getIp() {
+			return ip;
+		}
+
+
+		public void setIp(String ip) {
+			this.ip = ip;
+		}
+
+
+		public String getDeploymentDir() {
+			return deploymentDir;
+		}
+
+
+		public void setDeploymentDir(String deploymentDir) {
+			this.deploymentDir = deploymentDir;
+		}
+
+
+		public String getDataFileDir() {
+			return dataFileDir;
+		}
+
+
+		public void setDataFileDir(String dataFileDir) {
+			this.dataFileDir = dataFileDir;
+		}
+
+
+		public List<DataFile> getDfList() {
+			return dfList;
+		}
+
+
+		public void setDfList(List<DataFile> dfList) {
+			this.dfList = dfList;
+		}
+
+		/**
+		 * 数据文件的详细信息
+		 * @author HP
+		 *
+		 */
+		public static class DataFile{
+			private String fileName;
+			private String fileSize;
+			public String getFileName() {
+				return fileName;
+			}
+			public void setFileName(String fileName) {
+				this.fileName = fileName;
+			}
+			public String getFileSize() {
+				return fileSize;
+			}
+			public void setFileSize(String fileSize) {
+				this.fileSize = fileSize;
+			}
+			@Override
+			public String toString() {
+				return "DataFile [fileName=" + fileName + ", fileSize="
+						+ fileSize + "]";
+			}
+			
+		}
+	}
+	/**
+	 * 中间件的详细信息
+	 * @author HP
+	 *
+	 */
+	public static class Middleware{
+		
 	}
 }
