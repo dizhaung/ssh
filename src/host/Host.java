@@ -6,6 +6,7 @@ import java.util.List;
  * 配置文件每行的数据实体
  * @author tiger
  *
+ *
  */
 public class Host {
 	/**
