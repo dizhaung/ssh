@@ -332,6 +332,44 @@ public class SSHClient {
 					
 				}
 				hostDetail.setFsList(fsList);
+				
+				//检测是否安装了Oracle数据库
+
+				List<Host.Database> dList = new ArrayList<Host.Database>();
+				h.setdList(dList);
+				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
+				cmdResult = shell.getResponse();
+				boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
+				
+				//安装有Oracle
+				if(isExist){
+					Host.Database db = new Host.Database();
+					dList.add(db);
+					db.setType("Oracle");
+					db.setIp(ip);
+					//找到oracle用户的目录
+					shell.executeCommands(new String[] { "cat /etc/passwd|grep oracle" });
+					cmdResult = shell.getResponse();
+					String oracleUserDir = parseInfoByRegex(":/(.+):",cmdResult);
+					
+					//找到oracle的安装目录
+					shell.executeCommands(new String[] { "cat "+oracleUserDir+"/.profile" });
+					cmdResult = shell.getResponse();
+					
+					String oracleHomeDir = parseInfoByRegex("ORACLE_HOME=([^\r\n]+)",cmdResult);
+					System.out.println(oracleHomeDir);
+					oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", parseInfoByRegex("ORACLE_BASE=([^\r\n]+)",cmdResult)):oracleHomeDir;
+					System.out.println(oracleHomeDir);
+					db.setDeploymentDir(oracleHomeDir);
+					//找到版本
+					version = parseInfoByRegex("/((\\d+\\.?)+\\d*)/",oracleHomeDir);
+					db.setVersion(version);
+					//找到实例名
+					String oracleSid = parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult);
+					System.out.println(oracleSid);
+					db.setDbName(oracleSid);
+					
+				}
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				
 				
@@ -432,6 +470,36 @@ public class SSHClient {
 				}
 				hostDetail.setFsList(fsList);
 				
+				
+				//检测是否安装了Oracle数据库
+
+				List<Host.Database> dList = new ArrayList<Host.Database>();
+				h.setdList(dList);
+				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
+				cmdResult = shell.getResponse();
+				boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
+				
+				//安装有Oracle
+				if(isExist){
+					Host.Database db = new Host.Database();
+					dList.add(db);
+					db.setType("Oracle");
+					db.setIp(ip);
+				
+					//找到oracle的安装目录
+					String oracleHomeDir = parseInfoByRegex("(/.+)/bin/tnslsnr",cmdResult);
+					System.out.println(oracleHomeDir);
+					db.setDeploymentDir(oracleHomeDir);
+					//找到版本
+					String version = parseInfoByRegex("/((\\d+\\.?)+\\d*)/",oracleHomeDir);
+					db.setVersion(version);
+					//找到实例名
+					shell.executeCommands(new String[] { "echo $ORACLE_SID" });
+					cmdResult = shell.getResponse();
+					String oracleSid = cmdResult.split("[\r\n]+")[1];
+					System.out.println(oracleSid);
+					db.setDbName(oracleSid);
+				}
 				
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
