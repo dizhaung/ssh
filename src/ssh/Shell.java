@@ -34,7 +34,7 @@ public class Shell {
     private Session session;
     private ChannelShell channel;
     private  Expect4j expect = null;
-    private static final long defaultTimeOut = 1000;
+    private static final long defaultTimeOut = 10000;
     public  StringBuffer buffer= null;
     
     public static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
@@ -44,9 +44,7 @@ public class Shell {
     public static String ENTER_CHARACTER = BACKSLASH_R;
     public static final int SSH_PORT = 22;
     
-    public static String[] linuxPromptRegEx = new String[] { "~]#", "~#", "#",
-            ":~#", "/$", ">","\\$" };
-    
+   
     public static String[] errorMsg=new String[]{"could not acquire the config lock "};
     
     private String ip;
@@ -123,7 +121,7 @@ public class Shell {
                                                         // output of executed
                                                         // command
               
-                expectState.exp_continue();
+               expectState.exp_continue();
                 
             }
         };
@@ -228,6 +226,10 @@ public class Shell {
         }
     }
    
+    
+    public static String[] linuxPromptRegEx = new String[] { "~]#", "~#", "#",
+        ":~#", "/$", ">","SQL>","\\$"};
+
     public static void main(String[] args) throws UnsupportedEncodingException, InterruptedException{
     
     	String userDir = System.getProperty("user.dir");
@@ -247,23 +249,11 @@ public class Shell {
 			
 			// 建立连接
 			Shell shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
-
-			// 切换到root用户
-			/*
-			 * String[] commands = new String[]{"su -"}; boolean b =
-			 * shell.executeCommands(commands); if (b) { commands = new
-			 * String[]{"root",}; b = shell.executeCommands(commands); } if (b)
-			 * { b = shell.executeCommands(new String[]{"su - mysql"}); } if (b)
-			 * { b = shell.executeCommands(new String[]{"mysql"}); } if (b) { b
-			 * = shell.executeCommands(new String[]{"use test;"}); } if (b) { b
-			 * = shell.executeCommands(new String[]{"exit;"}); } if (b) { b =
-			 * shell.executeCommands(new String[]{"exit;"}); }
-			 */
-			// if (b) {
-			// b =
+			// 初始化服务器连接信息(特殊情况使用，每执行一个命令连接一次)
+			SSHClient ssh = new SSHClient(ip, jkUser, jkUserPassword);
+			
 			shell.executeCommands(new String[] { "uname" });
-			// }
-
+		
 			String cmdResult = shell.getResponse();
 			//获取操作系统的类型
 			
@@ -348,10 +338,10 @@ public class Shell {
 				
 				//安装有Oracle
 				if(isExist){
-					//找到oracle用户的目录
+					/*//找到oracle用户的目录
 					shell.executeCommands(new String[] { "cat /etc/passwd|grep oracle" });
 					cmdResult = shell.getResponse();
-					String oracleUserDir = parseInfoByRegex("::(.+):",cmdResult);
+					String oracleUserDir = parseInfoByRegex(":(/.+):",cmdResult);
 					
 					//找到oracle的安装目录
 					shell.executeCommands(new String[] { "cat "+oracleUserDir+"/.profile" });
@@ -364,7 +354,39 @@ public class Shell {
 					
 					//找到实例名
 					String oracleSid = parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult);
-					System.out.println(oracleSid);
+					System.out.println(oracleSid);*/
+					
+					System.out.println("tnslsnr="+cmdResult);
+					//找到数据库文件文件的目录
+					/*List<String> cmdsToExecute  = new ArrayList<String>();
+					cmdsToExecute.add("su - oracle");
+					cmdsToExecute.add("select * from dual;");
+					cmdsToExecute.add("select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;" );
+					cmdResult = ssh.execute(cmdsToExecute);*/
+					shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					
+					shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					////数据文件大小 的正则\s+(\d+MB)\s+
+					////数据文件位置的 正则\s+(/.*)\s+
+					Pattern locationRegex = Pattern.compile("\\s+(/.*)\\s+");
+					Pattern sizeRegex = Pattern.compile("\\s+(\\d+MB)\\s+");
+					Matcher locationMatcher = locationRegex.matcher(cmdResult);
+					Matcher sizeMatcher = sizeRegex.matcher(cmdResult);
+					
+					List<Host.Database.DataFile> dfList = new ArrayList<Host.Database.DataFile>();
+					while(locationMatcher.find()){
+						Host.Database.DataFile dataFile = new Host.Database.DataFile();
+						dataFile.setFileName(locationMatcher.group(1));
+						sizeMatcher.find();
+						dataFile.setFileSize(sizeMatcher.group(1));
+						System.out.println(dataFile);
+						dfList.add(dataFile);
+					}
+					
 				}
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				/*//CPU个数
