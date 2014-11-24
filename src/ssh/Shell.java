@@ -34,7 +34,7 @@ public class Shell {
     private Session session;
     private ChannelShell channel;
     private  Expect4j expect = null;
-    private static final long defaultTimeOut = 10000;
+    private static final long defaultTimeOut = 30*1000;
     public  StringBuffer buffer= null;
     
     public static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
@@ -91,6 +91,7 @@ public class Shell {
             channel = (ChannelShell) session.openChannel("shell");
             Expect4j expect = new Expect4j(channel.getInputStream(), channel
                     .getOutputStream());
+            expect.setDefaultTimeout(defaultTimeOut);
             channel.connect();
             log.debug(String.format("Logging to %s@%s:%s successfully!",user,ip,port));
             return expect;
@@ -378,6 +379,7 @@ public class Shell {
 					Matcher sizeMatcher = sizeRegex.matcher(cmdResult);
 					
 					List<Host.Database.DataFile> dfList = new ArrayList<Host.Database.DataFile>();
+					
 					while(locationMatcher.find()){
 						Host.Database.DataFile dataFile = new Host.Database.DataFile();
 						dataFile.setFileName(locationMatcher.group(1));
