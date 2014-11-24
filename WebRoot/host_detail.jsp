@@ -1,5 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
-    pageEncoding="UTF-8"%>
+    pageEncoding="UTF-8" errorPage=""%>
     <%@ page import="java.util.List" %>
     <%@ page import="host.Host" %>
     <%
@@ -7,6 +7,12 @@
     if(ip==null) return;
     List<Host> list =(List<Host>)request.getSession().getServletContext().getAttribute("host");
     Host host = null;
+    //执行采集前或者执行采集过程中，查看任意一个IP主机的信息，进入错误页面提示没有主机信息
+    if(list == null) {
+   
+    	return;
+    }
+    	
     //查找是这个IP的主机
     for(Host h : list){
     	if(ip.trim().endsWith(h.getIp().trim())){
@@ -36,11 +42,16 @@
   <body>
   	<div class="container">
   	
-  	<div class="page-header">
-  		<h1><%=host.getBuss() %>的基本信息 <small>IP:<%=ip %></small></h1>
-	</div>
-    
-	<table class="table table-striped">
+	  	<div class="page-header">
+	  		<h1><%=host.getBuss() %>的基本信息 <small>IP:<%=ip %></small></h1>
+		</div>
+    	<div class="row">   
+    		<div class="col-sm-12">
+    			<h2 class="text-center">服务器的基本信息</h2>
+    			<div class="row">
+    			
+    				<div class="col-sm-12">
+    					<table class="table table-striped">
               <%
               	Host.HostDetail hostDetail = host.getDetail();
         
@@ -62,12 +73,10 @@
                 </tr>
                 <tr>
               
-                  <td>是否双机:</td>
+                  <td colspan="2">是否双机:<%=hostDetail.getIsCluster() %></td>
+                   
+                  <td colspan="2">双机虚地址:<%=hostDetail.getClusterServiceIP() %></td>
                   
-                  <td></td>
-                  <td>双机虚地址:</td>
-                  <td>
-                   </td>
                 </tr>
                 <tr>
                  
@@ -91,74 +100,205 @@
                 </tr>
               </tbody>
             </table><!-- 内存等表格 -->
-     <div class="row">
-     <div class="col-sm-4">
-     
-     <table class="table table-bordered table-hover">
-      <thead>
-                <tr>
-                  <th>序号</th>
-				  <th>网卡名称</th>
-                  <th>网卡类型</th>
-                  
-                </tr>
-              </thead>
-              <tbody>
-              <%
-              	int i = 1;
-              	List<Host.HostDetail.NetworkCard> cardList = hostDetail.getCardList();
-              	for(Host.HostDetail.NetworkCard card : cardList){
-              		
-              %>
-                <tr>
-                  <td><%=i++ %></td>
-                  <td><%=card.getCardName() %></td>
-                  <td><%=card.getIfType() %></td>
-                </tr>
-                
-            <%
-              	}
-            %>
-                </tbody>
-            </table>
-     </div>
-     <div class="col-sm-2"></div>
-     <div class="col-sm-6">
-     	 <table class="table table-bordered table-hover">
-      			<thead>
-                <tr class="info">
-                  <th>文件系统序号</th>
-                  <th>挂载点</th>
-                  <th>大小</th>
-                  <th>利用率</th>
-                  
-                </tr>
-              </thead>
-              <tbody>
-              <%
-              int index = 1;
-              List<Host.HostDetail.FileSystem> fsList = host.getDetail().getFsList();
-              	for(Host.HostDetail.FileSystem fs : fsList){
-              		
-              	
-              %>
-                <tr>
-                <td><%=index++ %></td>
-                  <td><%=fs.getMountOn() %></td>
-                  <td><%=fs.getBlocks() %></td>
-                  <td><%=fs.getUsed() %></td>
-                  
-                </tr>
-                <%
-              		}
-                %>
-                
-                </tbody>
-            </table>
-     </div>
+    				</div>
+    			
+    			</div><!-- 服务器 类型版本信息    行结束 -->
+    			
+			 <div class="row">
+					     	<div class="col-sm-4">
+					     
+					     <table class="table table-bordered table-hover">
+					      <thead>
+					                <tr>
+					                  <th>序号</th>
+									  <th>网卡名称</th>
+					                  <th>网卡类型</th>
+					                  
+					                </tr>
+					              </thead>
+					              <tbody>
+					              <%
+					              	int i = 1;
+					              	List<Host.HostDetail.NetworkCard> cardList = hostDetail.getCardList();
+					              	for(Host.HostDetail.NetworkCard card : cardList){
+					              		
+					              %>
+					                <tr>
+					                  <td><%=i++ %></td>
+					                  <td><%=card.getCardName() %></td>
+					                  <td><%=card.getIfType() %></td>
+					                </tr>
+					                
+					            <%
+					              	}
+					            %>
+					                </tbody>
+					            </table>
+					     </div><!-- col-sm-4 -->
+					     <div class="col-sm-2"></div>
+					     <div class="col-sm-6">
+					     	 <table class="table table-bordered table-hover">
+					      			<thead>
+					                <tr class="info">
+					                  <th>文件系统序号</th>
+					                  <th>挂载点</th>
+					                  <th>大小</th>
+					                  <th>利用率</th>
+					                  
+					                </tr>
+					              </thead>
+					              <tbody>
+					              <%
+					              int index = 1;
+					              List<Host.HostDetail.FileSystem> fsList = host.getDetail().getFsList();
+					              	for(Host.HostDetail.FileSystem fs : fsList){
+					              		
+					              	
+					              %>
+					                <tr>
+					                <td><%=index++ %></td>
+					                  <td><%=fs.getMountOn() %></td>
+					                  <td><%=fs.getBlocks() %></td>
+					                  <td><%=fs.getUsed() %></td>
+					                  
+					                </tr>
+					                <%
+					              		}
+					                %>
+					                
+					                </tbody>
+					            </table>
+					     </div>
           
-     </div>
-    </div><!-- 行结束 -->
+    			 </div><!--服务器表格       行结束 -->
+     
+     
+     
+    		</div>
+    	</div> <!-- 服务器基本信息    行结束 -->
+	<%
+		List<Host.Database> dList = host.getdList();
+		for(Host.Database db:dList){
+			List<Host.Database.DataFile> dfList = db.getDfList();
+		
+	%>
+     <div class="row">
+     	<div class="col-sm-12">
+     		<h2 class="text-center"><%=db.getType() %>数据库的基本信息</h2>
+     		<div class="row">
+     			<div class="col-sm-12">
+	  			
+			 	<table class="table  table-striped table-hover">
+			 		<%
+			 		
+			 		%>
+	      			<tbody>
+	      			<tr>
+	      			<td>数据库类型:<%=db.getType() %></td>
+	      			<td>数据库版本号:<%=db.getVersion() %></td>
+	      			<td>服务器IP:<%=db.getIp() %></td>
+	      			<td>数据库名称:<%=db.getDbName() %></td>
+	      			</tr>
+	      			<tr><td colspan="4">数据库部署路径:<%=db.getDeploymentDir() %></td></tr>
+	              </tbody>
+	              </table>
+	             </div> 
+             </div> <!-- 数据库 版本等信息行结束 -->
+             
+             <div class="row">
+             	<div class="col-sm-8">
+             		
+             		<table class="table  table-bordered table-hover">
+             		<caption>数据库数据文件列表</caption>
+             		<thead>
+             			<tr>
+	             			<th>序号</th>
+	             			<th>文件路径</th>
+	             			<th>文件大小</th>
+             		    </tr>
+             		</thead>
+	      			<tbody>
+	      				<%
+	      					int j =1;
+	      					if(dfList != null){
+	      					for(Host.Database.DataFile dataFile:dfList){
+	      						
+	      				%>
+		      			<tr>
+			      			 <td><%=j++ %></td>
+			      			 <td><%=dataFile.getFileName() %></td>
+			      			 <td><%=dataFile.getFileSize() %></td>
+		      			 </tr>
+		      			 <%
+
+	      					}
+	      				}
+		      			 %>
+	              	</tbody>
+	              </table>
+             	</div>
+             </div><!-- 数据库数据文件列表行结束 -->
+     	</div>
+     </div><!--数据库 行结束 -->
+     
+     <%
+		}
+     %>
+     <div class="row">
+     	<div class="col-sm-12">
+     		 
+  			<h2 class="text-center">中间件详情</h2>
+  			<div class="row">
+  				<div class="col-sm-12">
+  					<table class="table table-striped table-hover">
+  						<tbody>
+  						<tr>
+  								<td>中间件类型:</td><td></td>
+  								<td>中间件版本号:</td><td></td>
+  								<td>服务器IP:</td><td></td>
+  							
+  							</tr>
+  							<tr>
+  								<td>中间件部署路径:</td><td></td>
+  								<td>中间件应用部署路径:</td><td></td>
+  								<td>JDK版本:</td><td></td>
+  							
+  							</tr>
+  							
+  							
+  						</tbody>
+  					</table>
+  				</div>
+  			</div><!-- 中间件版本等      行结束 -->
+		 	<div class="row">
+		 		<div class="col-sm-8">
+		 			
+		 			<table class="table table-bordered table-hover">
+		 			<caption>应用列表</caption>
+		 				<thead>
+		 					<tr>
+		 						<th>序号</th>
+		 						<th>文件路径</th>
+		 					</tr>
+		 				</thead>
+  						<tbody>
+  							<tr>
+  								<td>中间件类型:</td><td></td>
+  								 
+  							</tr>
+  							<tr>
+  								<td>中间件部署路径:</td><td></td>
+  							 
+  							</tr>
+  							
+  							
+  						</tbody>
+  					</table>
+		 		</div>
+		 	</div><!-- 中间件 应用列表     行结束-->
+     	</div>
+     </div><!-- 应用行结束 -->
+    </div>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="jquery/jquery-1.11.1.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
