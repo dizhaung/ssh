@@ -31,7 +31,7 @@ public class SSHClient {
     private static final int SSH_PORT = 22;
     private List<String> lstCmds = new ArrayList<String>();
     public static final String[] LINUX_PROMPT_REGEX_TEMPLATE = new String[] { "~]#", "~#", "#",
-        ":~#", "/$", ">","\\$"};//加入\\$匹配登录后命令提示符为\$的情况
+        ":~#", "/$", ">","\\$","SQL>"};//加入\\$匹配登录后命令提示符为\$的情况
     private String[] linuxPromptRegex = null;
     private Expect4j expect = null;
     private StringBuilder buffer = null;
@@ -289,6 +289,35 @@ public class SSHClient {
 				System.out.print("CPU核数"+parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult));
 				hostDetail.setLogicalCPUNumber(Integer.parseInt(parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult).trim())+1+"");
 				
+				//是否有配置双机
+				boolean isCluster = false;//默认没有配置双机
+				shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/clshowsrv -v" });
+				cmdResult = shell.getResponse();
+				
+				if(cmdResult.split("[\r\n]+").length>3?true:false){
+					//配置有AIX自带的双机
+					isCluster = true;
+					hostDetail.setIsCluster("是");
+					//获取双机虚地址
+					shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/cllscf" });
+					cmdResult = shell.getResponse();
+					hostDetail.setClusterServiceIP(parseInfoByRegex("Service\\s+IP\\s+Label\\s+[\\d\\w]+:\\s+IP\\s+address:\\s+((\\d{1,3}\\.){3}\\d{1,3})", cmdResult));
+				}
+				if(!isCluster){
+					shell.executeCommands(new String[] { "hastatus -sum" });
+					cmdResult = shell.getResponse();
+					//配置第三方双机
+					if(cmdResult.split("[\r\n]+").length>3?true:false){
+						isCluster = true;
+						hostDetail.setIsCluster("是");
+						hostDetail.setClusterServiceIP("非自带双机");
+					}
+				}
+				if(!isCluster){
+					//没有配置双机，也没有双机虚地址
+					hostDetail.setIsCluster("否");
+					hostDetail.setClusterServiceIP("NONE");
+				}
 				
 				//获取网卡信息
 				shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
@@ -368,6 +397,41 @@ public class SSHClient {
 					String oracleSid = parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult);
 					System.out.println(oracleSid);
 					db.setDbName(oracleSid);
+					
+					//数据文件保存路径
+					
+					
+					//数据文件列表
+					shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					
+					shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					////数据文件大小 的正则\s+(\d+MB)\s+
+					////数据文件位置的 正则\s+(/.*)\s+
+					Pattern locationRegex = Pattern.compile("\\s+(/.*)\\s+");
+					Pattern sizeRegex = Pattern.compile("\\s+(\\d+MB)\\s+");
+					Matcher locationMatcher = locationRegex.matcher(cmdResult);
+					Matcher sizeMatcher = sizeRegex.matcher(cmdResult);
+					
+					List<Host.Database.DataFile> dfList = new ArrayList<Host.Database.DataFile>();
+					db.setDfList(dfList);
+					while(locationMatcher.find()){
+						Host.Database.DataFile dataFile = new Host.Database.DataFile();
+						dataFile.setFileName(locationMatcher.group(1));
+						sizeMatcher.find();
+						dataFile.setFileSize(sizeMatcher.group(1));
+						System.out.println(dataFile);
+						dfList.add(dataFile);
+					}
+					//由于进入了sqlplus模式，在此断开连接，退出重新登录
+					shell.disconnect();
+					
+					// 建立连接
+					shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
+					//weblogic中间件信息
 					
 				}
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
@@ -483,6 +547,7 @@ public class SSHClient {
 				if(isExist){
 					Host.Database db = new Host.Database();
 					dList.add(db);
+					//
 					db.setType("Oracle");
 					db.setIp(ip);
 				
@@ -499,6 +564,33 @@ public class SSHClient {
 					String oracleSid = cmdResult.split("[\r\n]+")[1];
 					System.out.println(oracleSid);
 					db.setDbName(oracleSid);
+					
+					//找到数据库文件文件的目录
+					
+					shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					
+					shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					////数据文件大小 的正则\s+(\d+MB)\s+
+					////数据文件位置的 正则\s+(/.*)\s+
+					Pattern locationRegex = Pattern.compile("\\s+(/.*)\\s+");
+					Pattern sizeRegex = Pattern.compile("\\s+(\\d+MB)\\s+");
+					Matcher locationMatcher = locationRegex.matcher(cmdResult);
+					Matcher sizeMatcher = sizeRegex.matcher(cmdResult);
+					
+					List<Host.Database.DataFile> dfList = new ArrayList<Host.Database.DataFile>();
+					db.setDfList(dfList);
+					while(locationMatcher.find()){
+						Host.Database.DataFile dataFile = new Host.Database.DataFile();
+						dataFile.setFileName(locationMatcher.group(1));
+						sizeMatcher.find();
+						dataFile.setFileSize(sizeMatcher.group(1));
+						System.out.println(dataFile);
+						dfList.add(dataFile);
+					}
 				}
 				
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
