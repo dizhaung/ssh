@@ -92,7 +92,7 @@
               </tbody>
             </table><!-- 内存等表格 -->
      <div class="row">
-     <div class="span4">
+     <div class="col-sm-4">
      
      <table class="table table-bordered table-hover">
       <thead>
@@ -122,8 +122,8 @@
                 </tbody>
             </table>
      </div>
-     <div class="span2"></div>
-     <div class="span6">
+     <div class="col-sm-2"></div>
+     <div class="col-sm-6">
      	 <table class="table table-bordered table-hover">
       			<thead>
                 <tr class="info">
