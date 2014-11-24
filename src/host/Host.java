@@ -134,6 +134,25 @@ public class Host {
 		private String hostName;
 		private String osVersion;
 		private String memSize;
+		private String isCluster;
+		private String clusterServiceIP;
+		
+		public String getIsCluster() {
+			return isCluster;
+		}
+
+		public void setIsCluster(String isCluster) {
+			this.isCluster = isCluster;
+		}
+
+		public String getClusterServiceIP() {
+			return clusterServiceIP;
+		}
+
+		public void setClusterServiceIP(String clusterServiceIP) {
+			this.clusterServiceIP = clusterServiceIP;
+		}
+
 		public String getOs() {
 			return os;
 		}
