@@ -184,18 +184,15 @@ public class SSHClient {
         }
         return false;
     }
-    /**
-     *
-     */
-   
-       
+         
     /**
      *
      * @param args
      */
     public static void main(String[] args) {
     	String userDir = System.getProperty("user.dir");
-		List<Host> list = FileManager.getHostList(userDir+"/WebRoot/WEB-INF/classes/config.txt");
+    	
+		List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		
 		startPoll(list);
     }
@@ -626,7 +623,7 @@ public class SSHClient {
      * @param specific
      * @return
      */
-    private String[] getPromptRegexArrayByTemplateAndSpecificRegex(final String[] template,final String[] specific){
+    public String[] getPromptRegexArrayByTemplateAndSpecificRegex(final String[] template,final String[] specific){
     	String[] regexArray = new String[template.length+specific.length];
     	System.arraycopy(template, 0, regexArray, 0, template.length);
     	System.arraycopy(specific, 0, regexArray, template.length, specific.length);

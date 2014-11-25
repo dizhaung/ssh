@@ -2,6 +2,7 @@ package ssh;
 
 import host.FileManager;
 import host.Host;
+import host.LoadBalancer;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -234,7 +235,7 @@ public class Shell {
     public static void main(String[] args) throws UnsupportedEncodingException, InterruptedException{
     
     	String userDir = System.getProperty("user.dir");
-		List<Host> list = FileManager.getHostList(userDir+"/WebRoot/WEB-INF/classes/config.txt");
+    	List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		
 		for (Host h : list) {
 			System.out.println(h);
@@ -364,7 +365,7 @@ public class Shell {
 					cmdsToExecute.add("select * from dual;");
 					cmdsToExecute.add("select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;" );
 					cmdResult = ssh.execute(cmdsToExecute);*/
-					shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
+					/*shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
 					
@@ -387,8 +388,24 @@ public class Shell {
 						dataFile.setFileSize(sizeMatcher.group(1));
 						System.out.println(dataFile);
 						dfList.add(dataFile);
-					}
+					}*/
 					
+					//主机负载均衡
+					///加载负载均衡配置
+					List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
+					System.out.println(loadBalancerList);
+					
+					///连接每个负载获取负载信息
+					StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
+					for(LoadBalancer lb: loadBalancerList){
+						SSHClient sshLoadBalancer = new SSHClient(lb.getIp(), lb.getUserName(), lb.getPassword());
+						sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"User:","Password:"}));
+						List<String> cmdsToExecute = new ArrayList<String>();
+						cmdsToExecute.add("appdirector farm server table");
+						
+						cmdResult = ssh.execute(cmdsToExecute);
+						allLoadBalancerFarmAndServerInfo.append(cmdResult);
+					}
 				}
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				/*//CPU个数
