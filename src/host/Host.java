@@ -1,5 +1,6 @@
 package host;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -447,4 +448,35 @@ public class Host {
 	public static class Middleware{
 		
 	}
+	
+	/**
+	 * 从主机配置文件内容构造主机List
+	 * @author HP
+	 * @param fileContent  主机配置文件读取的内容，每行\n分隔
+	 * @return
+	 */
+	public static List<Host> getHostList(final String fileContent) {
+		
+          List<Host> hostList =  new ArrayList<Host>();
+          
+            String[] lines = fileContent.split("\n");
+              for(String tempString:lines){
+                System.out.println(tempString);
+                if(!tempString.matches("^#.*")){  //注释掉的主机过滤掉不链接
+                	String[] strs = tempString.split("\\|");
+                    
+                	Host host = new Host();
+                	host.setBuss(strs[0]);
+                	host.setIp(strs[1]);
+                	host.setJkUser(strs[2]);
+                	host.setJkUserPassword(strs[3]);
+                	host.setRootUser(strs[4]);
+                	host.setRootUserPassword(strs[5]);
+                
+                	hostList.add(host);
+                }
+               }
+          
+		return hostList;
+    }
 }
