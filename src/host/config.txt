@@ -1,6 +1,0 @@
-工单数据库1|10.204.4.48|db570a|jk|qwer1234|root|oagddb48
-工单数据库2|10.204.4.49	db570b|qwer1234|root|oagddb49
-工单Blog应用服务器1|10.204.4.32|jk|1234qwer|root|oaapp4.32
-工单Blog应用服务器2|10.204.4.33|jk|1234qwer|root|oaapp4.32
-公文工作流引擎服务器1|10.204.4.35|jk|jk123qwe|root|oagw4.35
-公文工作流引擎服务器2|10.204.4.36|jk|jk123qwe|root|oagw4.36
