@@ -446,7 +446,90 @@ public class Host {
 	 *
 	 */
 	public static class Middleware{
+		private String type;
+		private String version;
+		private String ip;
+		private String deploymentDir;
+		private String jdkVersion;
+		private List<App> appList;
 		
+		@Override
+		public String toString() {
+			return "Middleware [type=" + type + ", version=" + version
+					+ ", ip=" + ip + ", deploymentDir=" + deploymentDir
+					+ ", jdkVersion=" + jdkVersion + ", appList=" + appList
+					+ "]";
+		}
+
+		public String getType() {
+			return type;
+		}
+
+		public void setType(String type) {
+			this.type = type;
+		}
+
+		public String getVersion() {
+			return version;
+		}
+
+		public void setVersion(String version) {
+			this.version = version;
+		}
+
+		public String getIp() {
+			return ip;
+		}
+
+		public void setIp(String ip) {
+			this.ip = ip;
+		}
+
+		public String getDeploymentDir() {
+			return deploymentDir;
+		}
+
+		public void setDeploymentDir(String deploymentDir) {
+			this.deploymentDir = deploymentDir;
+		}
+
+		public String getJdkVersion() {
+			return jdkVersion;
+		}
+
+		public void setJdkVersion(String jdkVersion) {
+			this.jdkVersion = jdkVersion;
+		}
+
+		public List<App> getAppList() {
+			return appList;
+		}
+
+		public void setAppList(List<App> appList) {
+			this.appList = appList;
+		}
+
+		public class App{
+			private String appName;
+			private String dir;
+			public String getAppName() {
+				return appName;
+			}
+			public void setAppName(String appName) {
+				this.appName = appName;
+			}
+			public String getDir() {
+				return dir;
+			}
+			public void setDir(String dir) {
+				this.dir = dir;
+			}
+			@Override
+			public String toString() {
+				return "App [appName=" + appName + ", dir=" + dir + "]";
+			}
+			
+		}
 	}
 	
 	/**

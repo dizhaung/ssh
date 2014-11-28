@@ -38,7 +38,7 @@ public class PollActionServlet extends HttpServlet {
 		
 		String userDir = req.getRealPath("/");
 		//读取主机登录信息文件
-		List<Host> list = FileManager.getHostList(userDir+"/WEB-INF/classes/config.txt");
+		List<Host> list = Host.getHostList(FileManager.readFile(userDir+"/WEB-INF/classes/hostConfig.txt"));
 		//采集
 		SSHClient.startPoll(list);
 		req.getSession().getServletContext().setAttribute("host", list);
