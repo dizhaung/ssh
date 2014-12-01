@@ -340,7 +340,7 @@ public class SSHClient {
 				cmdResult =ssh.execute(cmdsToExecute);
 				
 				String[] diskFSEntries = cmdResult.split("\n");
-				//滤掉磁盘信息的表格头
+				///滤掉磁盘信息的表格头
 				List<Host.HostDetail.FileSystem> fsList = new ArrayList();
 				for(int i = 2,size = diskFSEntries.length-1;i<size;i++){
 					String[] entry = diskFSEntries[i].split("\\s+");
@@ -365,10 +365,10 @@ public class SSHClient {
 				h.setdList(dList);
 				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
 				cmdResult = shell.getResponse();
-				boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
-				
+				boolean isExistOracle = cmdResult.split("[\r\n]+").length >=4?true:false;
+				System.out.println("isExistOracle="+isExistOracle);
 				//安装有Oracle
-				if(isExist){
+				if(isExistOracle){
 					Host.Database db = new Host.Database();
 					dList.add(db);
 					db.setType("Oracle");
@@ -428,8 +428,37 @@ public class SSHClient {
 					
 					// 建立连接
 					shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
-					//weblogic中间件信息
 					
+				}
+				
+				
+
+				//weblogic中间件信息
+				List<Host.Middleware> mList = new ArrayList<Host.Middleware>();
+				h.setmList(mList);
+				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				String[] lines = cmdResult.split("[\r\n]+");
+				//存在weblogic
+				if(lines.length>4){
+					Host.Middleware mw = new Host.Middleware();
+					mList.add(mw);
+					mw.setType("WebLogic");
+					mw.setIp(ip);
+					//部署路径
+					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult);
+					mw.setDeploymentDir(deploymentDir);
+					//weblogic版本
+					mw.setVersion(parseInfoByRegex("([\\d.]+)$",deploymentDir));
+					
+					System.out.println(deploymentDir+"="+version);
+					//JDK版本
+					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult)+" -version" });
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);
+					mw.setJdkVersion(jdkVersion);
 				}
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				

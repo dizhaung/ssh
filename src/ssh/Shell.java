@@ -2,6 +2,7 @@ package ssh;
 
 import host.FileManager;
 import host.Host;
+import host.Host.HostDetail;
 import host.LoadBalancer;
 
 import java.io.UnsupportedEncodingException;
@@ -333,14 +334,14 @@ public class Shell {
 				System.out.println(cmdResult);
 				*/
 				/*System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));*/
-				//检测是否安装了Oracle数据库
+				/*//检测是否安装了Oracle数据库
 				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
 				cmdResult = shell.getResponse();
 				boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
 				
 				//安装有Oracle
 				if(isExist){
-					/*//找到oracle用户的目录
+					//找到oracle用户的目录
 					shell.executeCommands(new String[] { "cat /etc/passwd|grep oracle" });
 					cmdResult = shell.getResponse();
 					String oracleUserDir = parseInfoByRegex(":(/.+):",cmdResult);
@@ -356,16 +357,16 @@ public class Shell {
 					
 					//找到实例名
 					String oracleSid = parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult);
-					System.out.println(oracleSid);*/
+					System.out.println(oracleSid);
 					
 					System.out.println("tnslsnr="+cmdResult);
 					//找到数据库文件文件的目录
-					/*List<String> cmdsToExecute  = new ArrayList<String>();
+					List<String> cmdsToExecute  = new ArrayList<String>();
 					cmdsToExecute.add("su - oracle");
 					cmdsToExecute.add("select * from dual;");
 					cmdsToExecute.add("select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;" );
-					cmdResult = ssh.execute(cmdsToExecute);*/
-					/*shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
+					cmdResult = ssh.execute(cmdsToExecute);
+					shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
 					
@@ -388,25 +389,44 @@ public class Shell {
 						dataFile.setFileSize(sizeMatcher.group(1));
 						System.out.println(dataFile);
 						dfList.add(dataFile);
-					}*/
-					
-					//主机负载均衡
-					///加载负载均衡配置
-					List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
-					System.out.println(loadBalancerList);
-					
-					///连接每个负载获取负载信息
-					StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
-					for(LoadBalancer lb: loadBalancerList){
-						SSHClient sshLoadBalancer = new SSHClient(lb.getIp(), lb.getUserName(), lb.getPassword());
-						sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"User:","Password:"}));
-						List<String> cmdsToExecute = new ArrayList<String>();
-						cmdsToExecute.add("appdirector farm server table");
-						
-						cmdResult = ssh.execute(cmdsToExecute);
-						allLoadBalancerFarmAndServerInfo.append(cmdResult);
 					}
+				
+				}*/
+				/*//主机负载均衡
+				///加载负载均衡配置
+				List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
+				System.out.println(loadBalancerList);
+				
+				///连接每个负载获取负载信息
+				StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
+				for(LoadBalancer lb: loadBalancerList){
+					SSHClient sshLoadBalancer = new SSHClient(lb.getIp(), lb.getUserName(), lb.getPassword());
+					sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"User:","Password:"}));
+					List<String> cmdsToExecute = new ArrayList<String>();
+					cmdsToExecute.add("appdirector farm server table");
+					
+					cmdResult = ssh.execute(cmdsToExecute);
+					allLoadBalancerFarmAndServerInfo.append(cmdResult);
+				}*/
+				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				String[] lines = cmdResult.split("[\r\n]+");
+				//存在weblogic
+				if(lines.length>4){
+					//部署路径
+					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult);
+					//weblogic版本
+					String version = parseInfoByRegex("([\\d.]+)$",deploymentDir);
+					
+					System.out.println(deploymentDir+"="+version);
+					//JDK版本
+					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult)+" -version" });
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);
 				}
+				
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				/*//CPU个数
 				shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
