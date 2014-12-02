@@ -45,6 +45,9 @@
             </table>
      
     </div><!-- 行结束 -->
+    
+    
+    <iframe src="" style="display:none;" id="exportIframe"></iframe>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="jquery/jquery-1.11.1.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
@@ -53,6 +56,8 @@
     
     <script type="text/javascript">
     	$(document).ready(function(){
+    	
+    		
     		$('#poll').click(function(){
     			
     			var that = this;
@@ -84,8 +89,15 @@
     				exportButton.attr('disabled',false)
     			});
     		});
+    		//导出采集到的主机信息到文件
     		var exportButton  = $('#export').click(function(){
     			this.disabled = true;
+    			var that = this;
+    			$.get('/ssh/export',function(data){
+    				 
+    				$('#exportIframe').attr('src',data);
+    				that.disabled = false;
+    			});
     		});
     	});
     </script>

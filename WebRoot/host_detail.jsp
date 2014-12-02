@@ -1,16 +1,16 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
-    pageEncoding="UTF-8" errorPage=""%>
+    pageEncoding="UTF-8" errorPage="error.jsp"%>
     <%@ page import="java.util.List" %>
-    <%@ page import="host.Host" %>
+    <%@ page import="host.Host,poll.*" %>
     <%
     String ip = request.getParameter("ip");
     if(ip==null) return;
     List<Host> list =(List<Host>)request.getSession().getServletContext().getAttribute("host");
+    System.out.println("list="+list);
     Host host = null;
     //执行采集前或者执行采集过程中，查看任意一个IP主机的信息，进入错误页面提示没有主机信息
     if(list == null) {
-   
-    	return;
+   		throw new HostListAccessException("主机信息还未采集到");
     }
     	
     //查找是这个IP的主机
@@ -178,6 +178,7 @@
     	</div> <!-- 服务器基本信息    行结束 -->
 	<%
 		List<Host.Database> dList = host.getdList();
+		if(dList != null){
 		for(Host.Database db:dList){
 			List<Host.Database.DataFile> dfList = db.getDfList();
 		
@@ -241,8 +242,14 @@
      	</div>
      </div><!--数据库 行结束 -->
      
-     <%
+     <%   }
 		}
+		
+		List<Host.Middleware> mList = host.getmList();
+		if(mList != null){
+		for(Host.Middleware mw:mList){
+			
+	
      %>
      <div class="row">
      	<div class="col-sm-12">
@@ -253,15 +260,15 @@
   					<table class="table table-striped table-hover">
   						<tbody>
   						<tr>
-  								<td>中间件类型:</td><td></td>
-  								<td>中间件版本号:</td><td></td>
-  								<td>服务器IP:</td><td></td>
+  								<td>中间件类型:<%= mw.getType()%></td>
+  								<td>中间件版本号:<%=mw.getVersion() %></td>
+  								<td>服务器IP:<%=mw.getIp() %></td>
   							
   							</tr>
   							<tr>
-  								<td>中间件部署路径:</td><td></td>
-  								<td>中间件应用部署路径:</td><td></td>
-  								<td>JDK版本:</td><td></td>
+  								<td>中间件部署路径:<%=mw.getDeploymentDir() %></td>
+  								<td>中间件应用部署路径:</td>
+  								<td>JDK版本:<%=mw.getJdkVersion() %></td>
   							
   							</tr>
   							
@@ -298,6 +305,10 @@
 		 	</div><!-- 中间件 应用列表     行结束-->
      	</div>
      </div><!-- 应用行结束 -->
+    	<%
+    	 	}
+		}
+    	%>
     </div>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="jquery/jquery-1.11.1.js"></script>
