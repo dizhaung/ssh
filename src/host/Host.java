@@ -1,6 +1,7 @@
 package host;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -120,6 +121,7 @@ public class Host {
 
 	public static class HostDetail{
 		
+		
 		@Override
 		public String toString() {
 			return "HostDetail [os=" + os + ", hostType=" + hostType
@@ -137,7 +139,25 @@ public class Host {
 		private String memSize;
 		private String isCluster;
 		private String clusterServiceIP;
+		private String isLoadBalanced;
+		private String loadBalancedVirtualIP;
 		
+		public String getIsLoadBalanced() {
+			return isLoadBalanced;
+		}
+
+		public void setIsLoadBalanced(String isLoadBalanced) {
+			this.isLoadBalanced = isLoadBalanced;
+		}
+
+		public String getLoadBalancedVirtualIP() {
+			return loadBalancedVirtualIP;
+		}
+
+		public void setLoadBalancedVirtualIP(String loadBalancedVirtualIP) {
+			this.loadBalancedVirtualIP = loadBalancedVirtualIP;
+		}
+
 		public String getIsCluster() {
 			return isCluster;
 		}
@@ -225,7 +245,60 @@ public class Host {
 		public void setCardList(List<NetworkCard> cardList) {
 			this.cardList = cardList;
 		}
-
+		/**
+		 * 转化网口列表为可打印的表格
+		 * @return
+		 */
+		public List<List<String>> reverseCardListToTable(){
+			List<List<String>> table = new LinkedList();
+	    	List<String> tr = new LinkedList();
+	    	table.add(tr);
+	    	
+	    	tr.add("序号");
+	    	tr.add("网卡名称");
+	    	tr.add("网卡类型");
+	    	///打印表格主体
+	    	int i = 0;
+	    	if(cardList != null){
+		    	for(Host.HostDetail.NetworkCard card:cardList){
+		    		i++;
+		    		tr = new LinkedList();
+		        	tr.add(""+i);  //序号
+		        	tr.add(card.getCardName());
+		        	tr.add(card.getIfType());
+		        	table.add(tr);
+		    	}
+	    	}
+	    	return table;
+		}
+		/**
+		 * 转化磁盘列表为可打印的表格
+		 * @return
+		 */
+		public List<List<String>> reverseFsListToTable(){
+			List<List<String>> table = new LinkedList();
+	    	List<String> tr = new LinkedList();
+	    	table.add(tr);
+	    	
+	    	tr.add("文件系统序号");
+	    	tr.add("挂载点");
+	    	tr.add("大小");
+	    	tr.add("利用率");
+	    	int i = 0;
+	     
+	    	if(fsList != null){ //测试用，采集后没有磁盘    fsList size是0
+		    	for(Host.HostDetail.FileSystem fs:fsList){
+		    		i++;
+		    		tr = new LinkedList();
+		        	tr.add(""+i);  //序号
+		        	tr.add(fs.getMountOn());
+		        	tr.add(fs.getBlocks());
+		        	tr.add(fs.getUsed());
+		        	table.add(tr);
+		    	}
+	    	}
+	    	return table;
+		}
 		public List<FileSystem> getFsList() {
 			return fsList;
 		}
