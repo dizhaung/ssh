@@ -112,6 +112,57 @@ public class Host {
 	 */
 	private HostDetail detail;
 	
+
+	/**
+	 * 转换主机基本信息  为可打印到excel的格式
+	 * @author HP
+	 * @return
+	 */
+	public  List<List<String>> revserseServerBaseInfo(){
+		List<List<String>> table = new  LinkedList();
+		List<String> tr = new LinkedList();
+    	 
+    	tr.add("主机类型");
+    	tr.add( detail.getHostType() );
+    	tr.add( "操作系统" );
+    	tr.add( detail.getOs() );
+    	tr.add( "IP地址" );
+    	tr.add( detail.getOsVersion() );
+    	table.add(tr);
+    	
+    	tr = new LinkedList();
+    	tr.add( "主机名" );
+    	tr.add( detail.getHostName() );
+    	tr.add( "主机操作系统版本" );
+    	tr.add( detail.getOsVersion() );
+    	table.add(tr);
+    	 
+    	tr = new LinkedList();
+    	tr.add("是否双机");
+    	tr.add(detail.getIsCluster());
+    	tr.add("双机虚地址");
+    	tr.add(detail.getClusterServiceIP());
+    	table.add(tr);
+    	 
+    	tr = new LinkedList();
+    	tr.add("是否负载均衡");
+    	tr.add(detail.getIsLoadBalanced());
+    	tr.add("负载均衡虚地址");
+    	tr.add(detail.getLoadBalancedVirtualIP());
+    	table.add(tr);
+    	
+    	tr = new LinkedList();
+    	tr.add("内存大小");
+    	tr.add(detail.getMemSize());
+    	tr.add("CPU个数");
+    	tr.add(detail.getCPUNumber());
+    	tr.add("CPU主频");
+    	tr.add(detail.getCPUClockSpeed());
+    	tr.add("CPU核数");
+    	tr.add(detail.getLogicalCPUNumber());
+    	table.add(tr);
+    	return table;
+    }
 	public HostDetail getDetail() {
 		return detail;
 	}
@@ -120,7 +171,6 @@ public class Host {
 	}
 
 	public static class HostDetail{
-		
 		
 		@Override
 		public String toString() {
@@ -378,7 +428,85 @@ public class Host {
 	
 	private List<Database> dList;
 	private List<Middleware> mList;
-	
+	/**
+	 * @author HP
+	 * @return 一个可打印的包含数据库信息的表格列表
+	 */
+	public List<List<List<String>>> reverseDatabaseList(){
+		List<List<List<String>>>  tables = new LinkedList();
+		  if(dList != null){
+	        for(Host.Database db:dList){
+	        	//每个数据库的基本信息
+	        	List<List<String>> table = new  LinkedList();
+	        	List< String> tr = new  LinkedList();
+	        	tr.add("数据库类型");
+	        	tr.add(db.getType());
+	        	tr.add("数据库版本号");
+	        	tr.add(db.getVersion());
+	        	tr.add("服务器IP");
+	        	tr.add(db.getIp());
+	        	tr.add("数据库名称");
+	        	tr.add(db.getDbName());
+	        	table.add(tr);
+	        	tr = new  LinkedList();
+	        	tr.add("数据库部署路径");
+	        	tr.add(db.getDeploymentDir());
+	        	table.add(tr);
+	        	tables.add(table);
+	        	
+	        	//每个数据库的数据文件列表
+	        	 table = new  LinkedList();
+	        	  List<Database.DataFile> dfList = db.getDfList();
+	        	  int i  = 0;
+	        	  for(Database.DataFile df:dfList){
+	        		  tr = new  LinkedList();
+	        		  tr.add(++i+"");
+	        		  tr.add(df.getFileName());
+	        		  tr.add(df.getFileSize());
+	        		  table.add(tr);
+	        	 }
+	        	tables.add(table);
+	        	
+	        }
+		  }
+		  return tables;
+	}
+	/**
+	 * @author HP
+	 * @return 一个可打印的包含中间件信息的表格列表
+	 */
+	public List<List<List<String>>> reverseMiddlewareList(){
+		List<List<List<String>>>  tables = new LinkedList();
+		  if(mList != null){
+	        for(Host.Middleware mw:mList){
+	        	//每个中间件的基本信息
+	        	List<List<String>> table = new  LinkedList();
+	        	List< String> tr = new  LinkedList();
+	        	tr.add("中间件类型");
+	        	tr.add(mw.getType());
+	        	tr.add("中间件版本号");
+	        	tr.add(mw.getVersion());
+	        	tr.add("服务器IP");
+	        	tr.add(mw.getIp());
+	        	table.add(tr);
+	        	
+	        	tr = new  LinkedList();
+	        	tr.add("中间件部署路径");
+	        	tr.add(mw.getDeploymentDir());
+	        	tr.add("JDK版本");
+	        	tr.add(mw.getJdkVersion());
+	        	table.add(tr);
+	        	tables.add(table);
+	        	
+	        	//每个中间件的应用列表
+	        	 table = new  LinkedList();
+	        	 
+	        	tables.add(table);
+	        	
+	        }
+		  }
+		  return tables;
+	}
 	public List<Database> getdList() {
 		return dList;
 	}
