@@ -26,7 +26,7 @@ public class PollActionServlet extends HttpServlet {
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
 		// TODO Auto-generated method stub
-		super.doGet(req, resp);
+		doPost(req, resp);
 	}
 
 	@Override
@@ -38,7 +38,7 @@ public class PollActionServlet extends HttpServlet {
 		
 		String userDir = req.getRealPath("/");
 		//读取主机登录信息文件
-		List<Host> list = Host.getHostList(FileManager.readFile(userDir+"/WEB-INF/classes/hostConfig.txt"));
+		List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		//采集
 		SSHClient.startPoll(list);
 		req.getSession().getServletContext().setAttribute("host", list);
