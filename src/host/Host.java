@@ -712,7 +712,7 @@ public class Host {
 			this.appList = appList;
 		}
 
-		public class App{
+		public static class App{
 			private String appName;
 			private String dir;
 			public String getAppName() {
