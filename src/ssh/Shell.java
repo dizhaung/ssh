@@ -5,10 +5,15 @@ import host.Host;
 import host.Host.HostDetail;
 import host.LoadBalancer;
 
+import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,7 +41,7 @@ public class Shell {
     private Session session;
     private ChannelShell channel;
     private  Expect4j expect = null;
-    private static final long defaultTimeOut = 30*1000;
+    private static final long DEFAULT_TIME_OUT = 1*1000;
     public  StringBuffer buffer= null;
     
     public static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
@@ -93,7 +98,7 @@ public class Shell {
             channel = (ChannelShell) session.openChannel("shell");
             Expect4j expect = new Expect4j(channel.getInputStream(), channel
                     .getOutputStream());
-            expect.setDefaultTimeout(defaultTimeOut);
+            expect.setDefaultTimeout(DEFAULT_TIME_OUT);
             channel.connect();
             log.debug(String.format("Logging to %s@%s:%s successfully!",user,ip,port));
             return expect;
@@ -145,13 +150,8 @@ public class Shell {
                         return false;
                     }
                 }
-                lstPattern.add(new EofMatch(new Closure() { // should cause
-                                                            // entire page to be
-                                                            // collected
-                            public void run(ExpectState state) {
-                            }
-                        }));
-                lstPattern.add(new TimeoutMatch(defaultTimeOut, new Closure() {
+               
+                lstPattern.add(new TimeoutMatch(DEFAULT_TIME_OUT, new Closure() {
                     public void run(ExpectState state) {
                     }
                 }));
@@ -261,7 +261,7 @@ public class Shell {
 			//获取操作系统的类型
 			
 			System.out.println(cmdResult);
-			h.setOs(parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult));
+			h.setOs(parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult,1));
 			if("AIX".equalsIgnoreCase(h.getOs())){
 				/*
 				 //获取主机型号
@@ -415,8 +415,9 @@ public class Shell {
 				//存在weblogic
 				if(lines.length>4){
 					//部署路径
-					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult);
-					//weblogic版本
+					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
+					String userProjectsDirSource = cmdResult;
+					/*//weblogic版本
 					String version = parseInfoByRegex("([\\d.]+)$",deploymentDir);
 					
 					System.out.println(deploymentDir+"="+version);
@@ -424,7 +425,54 @@ public class Shell {
 					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult)+" -version" });
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
-					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);
+					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);*/
+					
+					//应用名称及其部署路径
+					///找到weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains
+					Set<String> appRootDirSet = parseUserProjectSetByRegex("-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy",userProjectsDirSource);
+					System.out.println(appRootDirSet);
+					Map<String,Set<String>> appDomainMap = new HashMap();//key是 appRootDir应用根目录
+					for(String appRootDir:appRootDirSet){
+						shell.executeCommands(new String[] {"ls " + appRootDir+"/user_projects/domains" });
+						cmdResult = shell.getResponse();
+						System.out.println(cmdResult);
+						 lines = cmdResult.split("[\r\n]+");
+						 if(lines.length>2){//domains下面有多个应用domain
+							Set<String> appDomainSet = new HashSet();
+							 for(int i = 1,index = lines.length-1 ;i<index;i++ ){
+								 String[] domains = lines[i].split("\\s+");
+								 for(String domain:domains){
+									 appDomainSet.add(domain);
+								 }
+									 
+							 }
+							 appDomainMap.put(appRootDir, appDomainSet);
+						 }
+						
+						
+					}
+					///从每个应用配置文件config.xml中检索  应用名称（从<name></name>配置节中） 和部署路径
+					List<Host.Middleware.App> appList = new ArrayList();
+					appRootDirSet = appDomainMap.keySet();
+					 for(String appRootDir:appRootDirSet){
+						 Set<String> appDomainSet = appDomainMap.get(appRootDir);
+						 ///appName_domain与应用映射   版本10中config.xml文件位于appName_domain->config文件夹
+						 for(String domain:appDomainSet){
+							 //System.out.println(domain);
+							 shell.executeCommands(new String[] {"cat " + appRootDir+"/user_projects/domains/"+domain+"/config/config.xml" });
+								cmdResult = shell.getResponse();
+								//System.out.println(cmdResult);
+								Host.Middleware.App app = new Host.Middleware.App();
+										
+								///匹配应用的名字 <app-deployment>(\n|.)*<name>(.*)</name>(\n|.)*</app-deployment>  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
+								app.setAppName(parseInfoByRegex("<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>",cmdResult,1)); 
+								app.setDir(parseInfoByRegex("<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>",cmdResult,1));
+								appList.add(app);
+								System.out.println(app);
+						 }
+						
+					 }
+						
 				}
 				
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
@@ -500,11 +548,11 @@ public class Shell {
 				String[] eths = cmdResult.split("[\r\n]+");
 				for(int i = 1,size=eths.length-1;i<size;i++){
 					
-							String eth = parseInfoByRegex("^(eth\\d+)",eths[i]);
+							String eth = parseInfoByRegex("^(eth\\d+)",eths[i],1);
 					shell.executeCommands(new String[]{"ethtool "+eth+"| grep \"Supported ports\""});
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
-					String typeStr = parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult);
+					String typeStr = parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult,1);
 					String type = typeStr.indexOf("TP")!=-1?"电口":(typeStr.indexOf("FIBRE")!=-1?"光口":"未知");
 					System.out.println(type);
 				}
@@ -541,15 +589,31 @@ public class Shell {
      * @param cmdResult   shell命名执行后返回的结果
      * @return
      */
-    public static String parseInfoByRegex(final String pattern,final String cmdResult){
+    public static String parseInfoByRegex(final String pattern,final String cmdResult,final int groupNum){
     	//获取操作系统的类型
-		Matcher m = Pattern.compile(pattern).matcher(cmdResult);
+		Matcher m = Pattern.compile(pattern ).matcher(cmdResult);
 		if(m.find()){
-			return m.group(1);
+			return m.group(groupNum);
 	
 		}else{
 			return "NONE";
 		}
     	
+    }
+    /**
+     * 使用pattern从cmdResult获取应用根目录
+     * @param pattern     提取必要信息的模式
+     * @param cmdResult   shell命名执行后返回的结果
+     * @return
+     */
+    public static Set<String> parseUserProjectSetByRegex(final String pattern,final String cmdResult){
+    	Set<String> userProjects = new HashSet();
+    	//获取操作系统的类型
+		Matcher m = Pattern.compile(pattern).matcher(cmdResult);
+		while(m.find()){
+			userProjects.add( m.group(1));
+	
+		}
+    	return userProjects;
     }
 }
