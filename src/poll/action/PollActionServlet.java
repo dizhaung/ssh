@@ -40,7 +40,7 @@ public class PollActionServlet extends HttpServlet {
 		//读取主机登录信息文件
 		List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		//采集
-		SSHClient.startPoll(list);
+		SSHClient.startCollect(list);
 		req.getSession().getServletContext().setAttribute("host", list);
 		PrintWriter out = resp.getWriter();
 		JSONArray o = JSONArray.fromObject(list);
