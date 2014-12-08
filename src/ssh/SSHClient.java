@@ -4,8 +4,12 @@ import host.FileManager;
 import host.Host;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -194,13 +198,13 @@ public class SSHClient {
     	
 		List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		
-		startPoll(list);
+		startCollect(list);
     }
     /**
      * 
      * @param list
      */
-    public static void startPoll(List<Host> list){
+    public static void startCollect(List<Host> list){
     	for (Host h : list) {
 			System.out.println(h);
 
@@ -223,7 +227,7 @@ public class SSHClient {
 			String cmdResult = shell.getResponse();
 			//获取操作系统的类型
 			System.out.println(cmdResult);
-			h.setOs(parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult));
+			h.setOs(shell.parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult,1));
 			if("AIX".equalsIgnoreCase(h.getOs())){
 				Host.HostDetail hostDetail = new Host.HostDetail();
 				h.setDetail(hostDetail);
@@ -232,26 +236,26 @@ public class SSHClient {
 				shell.executeCommands(new String[] { "uname -M" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print(parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult));
-				hostDetail.setHostType(parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult));
+				System.out.print(shell.parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult,1));
+				hostDetail.setHostType(shell.parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult,1));
 				//获取主机名
 				shell.executeCommands(new String[] { "uname -n" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print(parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult));
-				hostDetail.setHostName(parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult));
+				System.out.print(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
+				hostDetail.setHostName(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
 				//获取系统版本号
 				
 				shell.executeCommands(new String[] { "uname -v" });
 				cmdResult = shell.getResponse();
 				
-				String version = parseInfoByRegex("\\s*uname -v\r\n(.*)\r\n",cmdResult);
+				String version = shell.parseInfoByRegex("\\s*uname -v\r\n(.*)\r\n",cmdResult,1);
 				
 				shell.executeCommands(new String[] { "uname -r" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print(version+"."+parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult));
-				hostDetail.setOsVersion(version+"."+parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult));
+				System.out.print(version+"."+shell.parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult,1));
+				hostDetail.setOsVersion(version+"."+shell.parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult,1));
 				
 				
 				//获取内存大小
@@ -262,18 +266,18 @@ public class SSHClient {
 				cmdsToExecute.add("prtconf");
 				
 				cmdResult = ssh.execute(cmdsToExecute);;
-				System.out.println(parseInfoByRegex("[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})",cmdResult));
-				hostDetail.setMemSize(parseInfoByRegex("[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})",cmdResult));
+				System.out.println(shell.parseInfoByRegex("[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})",cmdResult,1));
+				hostDetail.setMemSize(shell.parseInfoByRegex("[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})",cmdResult,1));
 				
 				//获取CPU个数
 				
-				System.out.print("CPU个数"+parseInfoByRegex("[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)",cmdResult));
-				hostDetail.setCPUNumber(parseInfoByRegex("[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)",cmdResult));
+				System.out.print("CPU个数"+shell.parseInfoByRegex("[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)",cmdResult,1));
+				hostDetail.setCPUNumber(shell.parseInfoByRegex("[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)",cmdResult,1));
 				
 				//获取CPU频率
 				
-				System.out.print("CPU频率"+parseInfoByRegex("[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})",cmdResult));
-				hostDetail.setCPUClockSpeed(parseInfoByRegex("[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})",cmdResult));
+				System.out.print("CPU频率"+shell.parseInfoByRegex("[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})",cmdResult,1));
+				hostDetail.setCPUClockSpeed(shell.parseInfoByRegex("[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})",cmdResult,1));
 				
 				
 				//获取CPU核数
@@ -283,8 +287,8 @@ public class SSHClient {
 				cmdResult =ssh.execute(cmdsToExecute);
 				
 				
-				System.out.print("CPU核数"+parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult));
-				hostDetail.setLogicalCPUNumber(Integer.parseInt(parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult).trim())+1+"");
+				System.out.print("CPU核数"+shell.parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult,1));
+				hostDetail.setLogicalCPUNumber(Integer.parseInt(shell.parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult,1).trim())+1+"");
 				
 				//是否有配置双机
 				boolean isCluster = false;//默认没有配置双机
@@ -298,7 +302,7 @@ public class SSHClient {
 					//获取双机虚地址
 					shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/cllscf" });
 					cmdResult = shell.getResponse();
-					hostDetail.setClusterServiceIP(parseInfoByRegex("Service\\s+IP\\s+Label\\s+[\\d\\w]+:\\s+IP\\s+address:\\s+((\\d{1,3}\\.){3}\\d{1,3})", cmdResult));
+					hostDetail.setClusterServiceIP(shell.parseInfoByRegex("Service\\s+IP\\s+Label\\s+[\\d\\w]+:\\s+IP\\s+address:\\s+((\\d{1,3}\\.){3}\\d{1,3})", cmdResult,1));
 				}
 				if(!isCluster){
 					shell.executeCommands(new String[] { "hastatus -sum" });
@@ -325,7 +329,7 @@ public class SSHClient {
 				for(int i = 1,size = ents.length;i<size-1;i++){
 					//提取网卡的名字
 					Host.HostDetail.NetworkCard card = new Host.HostDetail.NetworkCard();
-					card.setCardName(parseInfoByRegex("^(ent\\d+)",ents[i]));
+					card.setCardName(shell.parseInfoByRegex("^(ent\\d+)",ents[i],1));
 					
 					//提取网卡的类型（光口 or 电口）
 					card.setIfType(ents[i].indexOf("-SX")== -1?"电口":"光口");//带有-SX为光口
@@ -376,22 +380,22 @@ public class SSHClient {
 					//找到oracle用户的目录
 					shell.executeCommands(new String[] { "cat /etc/passwd|grep oracle" });
 					cmdResult = shell.getResponse();
-					String oracleUserDir = parseInfoByRegex(":/(.+):",cmdResult);
+					String oracleUserDir = shell.parseInfoByRegex(":/(.+):",cmdResult,1);
 					
 					//找到oracle的安装目录
 					shell.executeCommands(new String[] { "cat "+oracleUserDir+"/.profile" });
 					cmdResult = shell.getResponse();
 					
-					String oracleHomeDir = parseInfoByRegex("ORACLE_HOME=([^\r\n]+)",cmdResult);
+					String oracleHomeDir = shell.parseInfoByRegex("ORACLE_HOME=([^\r\n]+)",cmdResult,1);
 					System.out.println(oracleHomeDir);
-					oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", parseInfoByRegex("ORACLE_BASE=([^\r\n]+)",cmdResult)):oracleHomeDir;
+					oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", shell.parseInfoByRegex("ORACLE_BASE=([^\r\n]+)",cmdResult,1)):oracleHomeDir;
 					System.out.println(oracleHomeDir);
 					db.setDeploymentDir(oracleHomeDir);
 					//找到版本
-					version = parseInfoByRegex("/((\\d+\\.?)+\\d*)/",oracleHomeDir);
+					version = shell.parseInfoByRegex("/((\\d+\\.?)+\\d*)/",oracleHomeDir,1);
 					db.setVersion(version);
 					//找到实例名
-					String oracleSid = parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult);
+					String oracleSid = shell.parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult,1);
 					System.out.println(oracleSid);
 					db.setDbName(oracleSid);
 					
@@ -447,18 +451,21 @@ public class SSHClient {
 					mw.setType("WebLogic");
 					mw.setIp(ip);
 					//部署路径
-					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult);
+					String deploymentDir = shell.parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
+					String userProjectsDirSource = cmdResult;
 					mw.setDeploymentDir(deploymentDir);
 					//weblogic版本
-					mw.setVersion(parseInfoByRegex("([\\d.]+)$",deploymentDir));
+					mw.setVersion(shell.parseInfoByRegex("([\\d.]+)$",deploymentDir,1));
 					
 					System.out.println(deploymentDir+"="+version);
 					//JDK版本
-					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult)+" -version" });
+					shell.executeCommands(new String[] { shell.parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
-					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);
+					String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
 					mw.setJdkVersion(jdkVersion);
+					
+					mw.setAppList(collectWeblogicAppListForAIX(shell, userProjectsDirSource));
 				}
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				
@@ -481,19 +488,19 @@ public class SSHClient {
 				shell.executeCommands(new String[] { "uname -n" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print(parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult));
-				hostDetail.setHostName(parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult));
+				System.out.print(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
+				hostDetail.setHostName(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
 				//获取系统版本号
 				shell.executeCommands(new String[] { "lsb_release -a |grep \"Description\"" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
-				hostDetail.setOsVersion(parseInfoByRegex("[Dd]escription:\\s+(.+)",cmdResult));
+				hostDetail.setOsVersion(shell.parseInfoByRegex("[Dd]escription:\\s+(.+)",cmdResult,1));
 				
 				//CPU个数
 				shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
 				cmdResult = shell.getResponse();
 				
-				hostDetail.setCPUNumber(parseInfoByRegex("\\s+(\\d+)\\s+",cmdResult));
+				hostDetail.setCPUNumber(shell.parseInfoByRegex("\\s+(\\d+)\\s+",cmdResult,1));
 				
 				//CPU核数
 				shell.executeCommands(new String[] { "cat /proc/cpuinfo | grep \"cpu cores\"" });
@@ -521,11 +528,11 @@ public class SSHClient {
 				if(eths.length>=3){
 					for(int i = 1,size=eths.length-1;i<size;i++){
 						
-						String eth = parseInfoByRegex("^(eth\\d+)",eths[i]);
+						String eth = shell.parseInfoByRegex("^(eth\\d+)",eths[i],1);
 						shell.executeCommands(new String[]{"ethtool "+eth+"| grep \"Supported ports\""});
 						cmdResult = shell.getResponse();
 						System.out.println(cmdResult);
-						String typeStr = parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult);
+						String typeStr = shell.parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult,1);
 						String ifType = typeStr.indexOf("TP")!=-1?"电口":(typeStr.indexOf("FIBRE")!=-1?"光口":"未知");
 						Host.HostDetail.NetworkCard card = new Host.HostDetail.NetworkCard();
 						card.setCardName(eth);
@@ -578,11 +585,11 @@ public class SSHClient {
 					db.setIp(ip);
 				
 					//找到oracle的安装目录
-					String oracleHomeDir = parseInfoByRegex("(/.+)/bin/tnslsnr",cmdResult);
+					String oracleHomeDir = shell.parseInfoByRegex("(/.+)/bin/tnslsnr",cmdResult,1);
 					System.out.println(oracleHomeDir);
 					db.setDeploymentDir(oracleHomeDir);
 					//找到版本
-					String version = parseInfoByRegex("/((\\d+\\.?)+\\d*)/",oracleHomeDir);
+					String version = shell.parseInfoByRegex("/((\\d+\\.?)+\\d*)/",oracleHomeDir,1);
 					db.setVersion(version);
 					//找到实例名
 					shell.executeCommands(new String[] { "echo $ORACLE_SID" });
@@ -619,6 +626,36 @@ public class SSHClient {
 					}
 				}
 				
+				
+				//weblogic中间件信息
+				List<Host.Middleware> mList = new ArrayList<Host.Middleware>();
+				h.setmList(mList);
+				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				String[] lines = cmdResult.split("[\r\n]+");
+				//存在weblogic
+				if(lines.length>4){
+					Host.Middleware mw = new Host.Middleware();
+					mList.add(mw);
+					mw.setType("WebLogic");
+					mw.setIp(ip);
+					//部署路径
+					String deploymentDir = shell.parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
+					String userProjectsDirSource = cmdResult;
+					mw.setDeploymentDir(deploymentDir);
+					//weblogic版本
+					mw.setVersion(shell.parseInfoByRegex("([\\d.]+)$",deploymentDir,1));
+				 
+					//JDK版本
+					shell.executeCommands(new String[] { shell.parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
+					mw.setJdkVersion(jdkVersion);
+					
+					mw.setAppList(collectWeblogicAppListForLinux(shell, userProjectsDirSource));
+				}
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
 			}
@@ -659,20 +696,171 @@ public class SSHClient {
     	return regexArray;
     }
     /**
-     * 使用pattern从cmdResult获取必要的信息，若提取不到返回NONE
-     * @param pattern     提取必要信息的模式
-     * @param cmdResult   shell命名执行后返回的结果
+     * 采集weblogic的应用名字和部署路径
+     * @param shell
+     * @param userProjectsDirSource   user_projects的上一层目录
      * @return
      */
-    public static String parseInfoByRegex(final String pattern,final String cmdResult){
-    	//获取操作系统的类型
-		Matcher m = Pattern.compile(pattern).matcher(cmdResult);
-		if(m.find()){
-			return m.group(1);
-	
-		}else{
-			return "NONE";
+    public static List<Host.Middleware.App> collectWeblogicAppListForAIX(final Shell shell,final String userProjectsDirSource){
+
+		
+		//应用名称及其部署路径
+		///找到weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains
+		Set<String> appRootDirSet = shell.parseUserProjectSetByRegex("-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy",userProjectsDirSource);
+		System.out.println(appRootDirSet);
+		Map<String,Set<String>> appDomainMap = new HashMap();//key是 appRootDir应用根目录
+		for(String appRootDir:appRootDirSet){
+			shell.executeCommands(new String[] {"ls " + appRootDir+"/user_projects/domains" });
+			String cmdResult = shell.getResponse();
+			System.out.println(cmdResult);
+			String[] lines = cmdResult.split("[\r\n]+");
+			 if(lines.length>2){//domains下面有多个应用domain
+				Set<String> appDomainSet = new HashSet();
+				 for(int i = 1,index = lines.length-1 ;i<index;i++ ){
+					 String[] domains = lines[i].split("\\s+");
+					 for(String domain:domains){
+						 appDomainSet.add(domain);
+					 }
+						 
+				 }
+				 appDomainMap.put(appRootDir, appDomainSet);
+			 }
+			
+			
 		}
-    	
+		///从每个应用配置文件config.xml中检索  应用名称（从<name></name>配置节中） 和部署路径
+		List<Host.Middleware.App> appList = new ArrayList();
+		appRootDirSet = appDomainMap.keySet();
+		 for(String appRootDir:appRootDirSet){
+			 Set<String> appDomainSet = appDomainMap.get(appRootDir);
+			 ///appName_domain与应用映射   版本10中config.xml文件位于appName_domain->config文件夹
+			 for(String domain:appDomainSet){
+				 //System.out.println(domain);
+				 boolean isExistConfig = false;
+				 	if(!isExistConfig){
+					 	shell.executeCommands(new String[] {"cat " + appRootDir+"/user_projects/domains/"+domain+"/config/config.xml" });
+						String cmdResult = shell.getResponse();
+						String[] lines = cmdResult.split("[\r\n]+");
+						System.out.println(cmdResult);
+						///weblogic10
+						if(lines.length>4){    ///执行返回的结果大于4行的话，说明存在config.xml配置文件
+							isExistConfig = true;
+							Host.Middleware.App app = new Host.Middleware.App();
+							
+							///匹配应用的名字<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
+							app.setAppName(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>",cmdResult,1)); 
+							app.setDir(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>",cmdResult,1));
+							appList.add(app);
+							System.out.println(app);
+						}
+				 	}
+					if(!isExistConfig){
+						///weblogic8
+						shell.executeCommands(new String[] {"cat " + appRootDir+"/user_projects/domains/"+domain+"/config.xml" });
+						String cmdResult = shell.getResponse();
+						String[] lines = cmdResult.split("[\r\n]+");
+						if(lines.length>4){		///执行返回的结果大于4行的话，说明存在config.xml配置文件
+							isExistConfig = true;
+							Host.Middleware.App app = new Host.Middleware.App();
+							///匹配应用的名字<[Aa]pplication[\s\S]+?[Nn]ame="([\S]+)"  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
+							app.setAppName(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"",cmdResult,1)); 
+							app.setDir(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"",cmdResult,1));
+							appList.add(app);
+							System.out.println(app);
+						}
+					}
+					//System.out.println(cmdResult);
+					
+			 }
+			
+		 }
+			
+		 return appList;
+		
+    }
+    
+    /**
+     * 
+     * @param shell
+     * @param userProjectsDirSource
+     * @return
+     */
+    public static List<Host.Middleware.App> collectWeblogicAppListForLinux(final Shell shell,final String userProjectsDirSource){
+
+	
+		//应用名称及其部署路径
+		///找到weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains
+		Set<String> appRootDirSet = shell.parseUserProjectSetByRegex("-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy",userProjectsDirSource);
+		System.out.println(appRootDirSet);
+		Map<String,Set<String>> appDomainMap = new HashMap();//key是 appRootDir应用根目录
+		for(String appRootDir:appRootDirSet){
+			shell.executeCommands(new String[] {"ls --color=never " + appRootDir+"/user_projects/domains" });
+			String cmdResult = shell.getResponse();
+			System.out.println(cmdResult);
+			 String[] lines = cmdResult.split("[\r\n]+");
+			 if(lines.length>2){//domains下面有多个应用domain
+				Set<String> appDomainSet = new HashSet();
+				 for(int i = 1,index = lines.length-1 ;i<index;i++ ){
+					 String[] domains = lines[i].split("\\s+");
+					 for(String domain:domains){
+						 appDomainSet.add(domain);
+					 }
+						 
+				 }
+				 appDomainMap.put(appRootDir, appDomainSet);
+			 }
+			
+			
+		}
+		///从每个应用配置文件config.xml中检索  应用名称（从<name></name>配置节中） 和部署路径
+		List<Host.Middleware.App> appList = new ArrayList();
+		appRootDirSet = appDomainMap.keySet();
+		 for(String appRootDir:appRootDirSet){
+			 Set<String> appDomainSet = appDomainMap.get(appRootDir);
+			 ///appName_domain与应用映射   版本10中config.xml文件位于appName_domain->config文件夹
+			 for(String domain:appDomainSet){
+				 //System.out.println(domain);
+				 boolean isExistConfig = false;
+					 if(!isExistConfig){
+					 shell.executeCommands(new String[] {"cat " + appRootDir+"/user_projects/domains/"+domain+"/config/config.xml" });
+						String cmdResult = shell.getResponse();
+						
+						String[] lines = cmdResult.split("[\r\n]+");
+					
+						///weblogic10
+						if(lines.length>4){    ///执行返回的结果大于4行的话，说明存在config.xml配置文件
+							isExistConfig = true;
+							Host.Middleware.App app = new Host.Middleware.App();
+							
+							///匹配应用的名字<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
+							app.setAppName(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>",cmdResult,1)); 
+							app.setDir(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>",cmdResult,1));
+							appList.add(app);
+							System.out.println(app);
+						}
+					 }
+					if(!isExistConfig){
+						///weblogic8
+						shell.executeCommands(new String[] {"cat " + appRootDir+"/user_projects/domains/"+domain+"/config.xml" });
+						String cmdResult = shell.getResponse();
+						
+						String[] lines = cmdResult.split("[\r\n]+");
+						if(lines.length>4){		///执行返回的结果大于4行的话，说明存在config.xml配置文件
+							isExistConfig = true;
+							Host.Middleware.App app = new Host.Middleware.App();
+							///匹配应用的名字<[Aa]pplication[\s\S]+?[Nn]ame="([\S]+)"  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
+							app.setAppName(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"",cmdResult,1)); 
+							app.setDir(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"",cmdResult,1));
+							appList.add(app);
+							System.out.println(app);
+						}
+					}
+					//System.out.println(cmdResult);
+					
+			 }
+			
+		 }
+			
+		 return appList;
     }
 }

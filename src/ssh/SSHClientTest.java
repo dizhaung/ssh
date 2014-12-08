@@ -3,6 +3,8 @@ package ssh;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.oro.text.regex.MalformedPatternException;
 
@@ -168,5 +170,6 @@ public class SSHClientTest {
         cmdsToExecute.add("prtconf");//复杂命令仍旧无法执行
         String outputLog = ssh.execute(cmdsToExecute);
         System.out.println(outputLog);
+    	 
     }
 }

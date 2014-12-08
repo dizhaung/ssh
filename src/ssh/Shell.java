@@ -41,7 +41,7 @@ public class Shell {
     private Session session;
     private ChannelShell channel;
     private  Expect4j expect = null;
-    private static final long DEFAULT_TIME_OUT = 1*1000;
+    private static final long DEFAULT_TIME_OUT = 2*1000;
     public  StringBuffer buffer= null;
     
     public static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
@@ -408,6 +408,7 @@ public class Shell {
 					cmdResult = ssh.execute(cmdsToExecute);
 					allLoadBalancerFarmAndServerInfo.append(cmdResult);
 				}*/
+				
 				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
@@ -428,51 +429,7 @@ public class Shell {
 					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);*/
 					
 					//应用名称及其部署路径
-					///找到weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains
-					Set<String> appRootDirSet = parseUserProjectSetByRegex("-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy",userProjectsDirSource);
-					System.out.println(appRootDirSet);
-					Map<String,Set<String>> appDomainMap = new HashMap();//key是 appRootDir应用根目录
-					for(String appRootDir:appRootDirSet){
-						shell.executeCommands(new String[] {"ls " + appRootDir+"/user_projects/domains" });
-						cmdResult = shell.getResponse();
-						System.out.println(cmdResult);
-						 lines = cmdResult.split("[\r\n]+");
-						 if(lines.length>2){//domains下面有多个应用domain
-							Set<String> appDomainSet = new HashSet();
-							 for(int i = 1,index = lines.length-1 ;i<index;i++ ){
-								 String[] domains = lines[i].split("\\s+");
-								 for(String domain:domains){
-									 appDomainSet.add(domain);
-								 }
-									 
-							 }
-							 appDomainMap.put(appRootDir, appDomainSet);
-						 }
-						
-						
-					}
-					///从每个应用配置文件config.xml中检索  应用名称（从<name></name>配置节中） 和部署路径
-					List<Host.Middleware.App> appList = new ArrayList();
-					appRootDirSet = appDomainMap.keySet();
-					 for(String appRootDir:appRootDirSet){
-						 Set<String> appDomainSet = appDomainMap.get(appRootDir);
-						 ///appName_domain与应用映射   版本10中config.xml文件位于appName_domain->config文件夹
-						 for(String domain:appDomainSet){
-							 //System.out.println(domain);
-							 shell.executeCommands(new String[] {"cat " + appRootDir+"/user_projects/domains/"+domain+"/config/config.xml" });
-								cmdResult = shell.getResponse();
-								//System.out.println(cmdResult);
-								Host.Middleware.App app = new Host.Middleware.App();
-										
-								///匹配应用的名字 <app-deployment>(\n|.)*<name>(.*)</name>(\n|.)*</app-deployment>  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
-								app.setAppName(parseInfoByRegex("<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>",cmdResult,1)); 
-								app.setDir(parseInfoByRegex("<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>",cmdResult,1));
-								appList.add(app);
-								System.out.println(app);
-						 }
-						
-					 }
-						
+					SSHClient.collectWeblogicAppListForAIX(shell, userProjectsDirSource); 
 				}
 				
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
@@ -542,7 +499,7 @@ public class Shell {
 					
 				}
 				*/
-				//获取网卡信息
+				/*//获取网卡信息
 				shell.executeCommands(new String[] { "ifconfig -a | grep \"^eth\"" });
 				cmdResult = shell.getResponse();
 				String[] eths = cmdResult.split("[\r\n]+");
@@ -555,7 +512,30 @@ public class Shell {
 					String typeStr = parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult,1);
 					String type = typeStr.indexOf("TP")!=-1?"电口":(typeStr.indexOf("FIBRE")!=-1?"光口":"未知");
 					System.out.println(type);
-				}
+				}*/
+				
+				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+				cmdResult = shell.getResponse();
+				System.out.println(cmdResult);
+				String[] lines = cmdResult.split("[\r\n]+");
+				//存在weblogic
+				if(lines.length>4){
+					//部署路径
+					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
+					String userProjectsDirSource = cmdResult;
+					/*//weblogic版本
+					String version = parseInfoByRegex("([\\d.]+)$",deploymentDir);
+					
+					System.out.println(deploymentDir+"="+version);
+					//JDK版本
+					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult)+" -version" });
+					cmdResult = shell.getResponse();
+					System.out.println(cmdResult);
+					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);*/
+					
+					//应用名称及其部署路径
+					SSHClient.collectWeblogicAppListForLinux(shell, userProjectsDirSource);
+					}
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
 			}
