@@ -285,26 +285,38 @@
 		 				<thead>
 		 					<tr>
 		 						<th>序号</th>
-		 						<th>文件路径</th>
+		 						<th>应用名称</th>
+		 						<th>部署路径</th>
 		 					</tr>
 		 				</thead>
   						<tbody>
+  						<%
+  							List<Host.Middleware.App> appList = mw.getAppList();
+  							if(appList.size()>0){
+  								int i = 1;
+  								for(Host.Middleware.App app:appList){
+  						%>
   							<tr>
-  								<td>中间件类型:</td><td></td>
-  								 
-  							</tr>
+  								<td><%=i++ %></td>
+  								<td><%=app.getAppName() %></td>
+  								<td><%=app.getDir() %></td> 
+  							</tr> 
+  							<%
+  								}
+  							}else{
+  							%>
   							<tr>
-  								<td>中间件部署路径:</td><td></td>
-  							 
+  								<td colspan="3">无</td>
   							</tr>
-  							
-  							
+  							<%
+  							}
+  							%>
   						</tbody>
   					</table>
 		 		</div>
 		 	</div><!-- 中间件 应用列表     行结束-->
      	</div>
-     </div><!-- 应用行结束 -->
+    </div><!-- 应用 row结束 -->
     	<%
     	 	}
 		}
