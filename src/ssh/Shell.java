@@ -6,6 +6,7 @@ import host.Host.HostDetail;
 import host.LoadBalancer;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,6 +23,7 @@ import org.apache.oro.text.regex.MalformedPatternException;
 
 import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.UserInfo;
 
@@ -36,7 +38,7 @@ import expect4j.matches.TimeoutMatch;
 
 public class Shell {
 
-    private static Logger log = Logger.getLogger(Shell.class);
+    private static Logger logger = Logger.getLogger(Shell.class);
     
     private Session session;
     private ChannelShell channel;
@@ -58,8 +60,15 @@ public class Shell {
     private int port;
     private String user;
     private String password;
-    
-    public Shell(String ip,int port,String user,String password) {
+    /**
+     * 模拟终端
+     * @param ip
+     * @param port
+     * @param user
+     * @param password
+     * @throws ShellException  创建Shell失败，可能的原因1.网络失败  2.用户名或者密码错误	3输入输出流获取失败	4Expect创建失败
+     */
+    public Shell(String ip,int port,String user,String password) throws ShellException{
         this.ip=ip;
         this.port=port;
         this.user=user;
@@ -80,10 +89,14 @@ public class Shell {
     public String getResponse(){
         return buffer.toString();
     }
-    
-    private Expect4j getExpect() {
+    /**
+     * 
+     * @return
+     * @throws Exception   连接主机失败
+     */
+    private Expect4j getExpect() throws ShellException{
         try {
-            log.debug(String.format("Start logging to %s@%s:%s",user,ip,port));
+            logger.debug(String.format("Start logging to %s@%s:%s",user,ip,port));
             JSch jsch = new JSch();
             session = jsch.getSession(user, ip, port);
             session.setPassword(password);
@@ -100,25 +113,36 @@ public class Shell {
                     .getOutputStream());
             expect.setDefaultTimeout(DEFAULT_TIME_OUT);
             channel.connect();
-            log.debug(String.format("Logging to %s@%s:%s successfully!",user,ip,port));
+            logger.debug(String.format("Logging to %s@%s:%s successfully!",user,ip,port));
             return expect;
-        } catch (Exception ex) {
-            log.error("Connect to "+ip+":"+port+"failed,please check your username and password!");
-            ex.printStackTrace();
-        }
-        return null;
+        } catch (JSchException ex) {
+        	logger.error("连接到 "+ip+":"+port+"失败,请检查网络、用户名和密码!");
+        	
+            //ex.printStackTrace();
+            throw new ShellException(ex.toString()+"	连接到 "+ip+":"+port+"失败,请检查网络、用户名和密码!",ex);
+        } catch (IOException ex) {
+			// TODO Auto-generated catch block
+        	logger.error(ex.getMessage()+"	成功连接到 "+ip+":"+port+",但是获取JSCH channel输入/输出流失败!");
+			 
+			throw new ShellException(ex.toString()+"	成功连接到 "+ip+":"+port+",但是获取JSCH channel输入/输出流失败!",ex);
+		} catch (Exception ex) {
+			// TODO Auto-generated catch block
+			throw new ShellException(ex.toString()+"	Expect失败，错误未知",ex);
+		}
     }
 
     public boolean executeCommands(String[] commands) {
+    	buffer = new StringBuffer();
+    	//主机连接应为用户名  密码不正确  或者  网络不通  而连接主机失败的情况下 
         if(expect==null){
             return false;
         }
-        buffer = new StringBuffer();
-        log.debug("----------Running commands are listed as follows:----------");
+       
+        logger.debug("----------Running commands are listed as follows:----------");
         for(String command:commands){
-            log.debug(command);
+        	logger.debug(command);
         }
-        log.debug("----------End----------");
+        logger.debug("----------End----------");
         
         Closure closure = new Closure() {
             public void run(ExpectState expectState) throws Exception {
@@ -251,7 +275,20 @@ public class Shell {
 			String rootUserPassword = h.getRootUserPassword();
 			
 			// 建立连接
-			Shell shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
+			Shell shell = null;
+			
+			try {
+				shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
+			} catch (ShellException e) {
+				// TODO Auto-generated catch block
+				logger.error("无法采集主机"+ip+"，连接下一个主机");
+				e.printStackTrace();
+				continue;
+			}
+		
+		
+				
+			
 			// 初始化服务器连接信息(特殊情况使用，每执行一个命令连接一次)
 			SSHClient ssh = new SSHClient(ip, jkUser, jkUserPassword);
 			
