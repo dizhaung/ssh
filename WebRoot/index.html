@@ -23,8 +23,11 @@
   		<h1>主机性能信息 <small>物理机</small></h1>
 	</div>
     <p>
-  		<button id="poll" class="btn  btn-primary" type="button">执&nbsp;&nbsp;行</button>
+  		<button id="poll" class="btn  btn-primary  " type="button">执&nbsp;&nbsp;行</button>
   		<button id="export" class="btn  btn-primary pull-right" type="button">导&nbsp;&nbsp;出</button>
+		 
+			<div class="progress"><div id="progressBar" class="progress-bar" style="width:0;">0/0</div></div>
+		 
 	</p>
 
 	<table class="table table-bordered">
@@ -48,6 +51,11 @@
     
     
     <iframe src="" style="display:none;" id="exportIframe"></iframe>
+    <!-- DWR -->
+    <script type="text/javascript" src="dwr/util.js"></script>    
+	<script type="text/javascript" src="dwr/engine.js"></script> 
+	<!-- 页面推环境初始化 -->
+	<script type="text/javascript" src="dwr/interface/DWRContexInitor.js"></script>
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="jquery/jquery-1.11.1.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
@@ -55,9 +63,20 @@
     <script src="js/json/json_parse.js"></script>
     
     <script type="text/javascript">
+	   
+		//	
+		function show(msg){  
+			console.log(msg);
+			msg = JSON.parse(msg);
+			 
+		   var progressBar =  $("#progressBar");
+		   progressBar.text('当前进度 '+msg.nowNum+"/"+msg.maxNum+"	当前IP:"+msg.ip); 
+		   msg.maxNum == 0?progressBar.css('width','100%'):progressBar.css('width',msg.nowNum/msg.maxNum*100+'%')
+		}  
     	$(document).ready(function(){
     	
-    		
+    		 //表示允许使用推送技术  
+	        dwr.engine.setActiveReverseAjax(true);  
     		$('#poll').click(function(){
     			
     			var that = this;
@@ -67,10 +86,10 @@
     			//将上一次采集到的主机表格清空
     			var tBody = $('table tbody');
     			tBody.html('');
-    			if(window.console){
-    				console.log('poll');
-    			}
-    			$.post('/ssh/poll',function(data){
+    			//初始化到这个页面的DWR推上下文环境
+    			DWRContexInitor.init("/ssh/index.html","show");  
+	      		
+    			$.post('/ssh/collect',function(data){
     				data = JSON.parse(data);
     				for(var i = 0;i<data.length;i++){
     					var tr = $('<tr></tr>');
@@ -87,7 +106,7 @@
     				//采集完毕，恢复按钮
     				that.disabled = false;
     				exportButton.attr('disabled',false)
-    			});
+    			}); 
     		});
     		//导出采集到的主机信息到文件
     		var exportButton  = $('#export').click(function(){

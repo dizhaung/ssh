@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8"
     pageEncoding="UTF-8" errorPage="error.jsp"%>
     <%@ page import="java.util.List" %>
-    <%@ page import="host.Host,poll.*" %>
+    <%@ page import="host.Host,collect.*" %>
     <%
     String ip = request.getParameter("ip");
     if(ip==null) return;
