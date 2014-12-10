@@ -1,0 +1,10 @@
+2014-12-10 15:46:28 -  INFO - org.directwebremoting.log.startup->157 - 0    [main]    - Starting: DWRServlet v3.0.0-RC2-final-312 on Apache Tomcat/6.0.36 / JDK 1.6.0_43 from Sun Microsystems Inc. at /ssh
+2014-12-10 16:04:29 -  INFO - org.directwebremoting.log.startup->157 - 0    [main]    - Starting: DWRServlet v3.0.0-RC2-final-312 on Apache Tomcat/6.0.36 / JDK 1.6.0_43 from Sun Microsystems Inc. at /ssh
+2014-12-10 16:04:42 -  INFO - collect.action.CollectActionServlet->43 - 13809 [http-80-2]    - ---读取主机登录信息文件---
+2014-12-10 16:04:42 -  INFO - collect.action.CollectActionServlet->46 - 13815 [http-80-2]    - ---采集---
+2014-12-10 16:05:04 - ERROR - ssh.Shell->106 - 35002 [http-80-2]    - Connect to 10.210.42.5:22failed,please check your username and password!
+2014-12-10 17:12:08 -  INFO - org.directwebremoting.log.startup->157 - 0    [main]    - Starting: DWRServlet v3.0.0-RC2-final-312 on Apache Tomcat/6.0.36 / JDK 1.6.0_43 from Sun Microsystems Inc. at /ssh
+2014-12-10 17:12:14 -  INFO - collect.action.CollectActionServlet->43 - 6146 [http-80-3]    - ---读取主机登录信息文件---
+2014-12-10 17:12:14 -  INFO - collect.action.CollectActionServlet->46 - 6151 [http-80-3]    - ---采集---
+2014-12-10 17:12:35 - ERROR - ssh.Shell->119 - 27351 [http-80-3]    - 连接到 10.210.42.5:22失败,请检查网络、用户名和密码!
+2014-12-10 17:12:56 - ERROR - ssh.Shell->119 - 48359 [http-80-3]    - 连接到 10.204.16.150:22失败,请检查网络、用户名和密码!
