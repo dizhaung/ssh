@@ -16,6 +16,8 @@ import java.util.List;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -31,6 +33,7 @@ public class POIReadAndWriteTool {
 		}
 		return instance;
 	}
+	static Workbook wb = null;  
 	public void init(){
 		
 	}
@@ -44,7 +47,7 @@ public class POIReadAndWriteTool {
     public  void write(final List<Host> hostList,File file) throws IOException {  
     	 
         //创建工作文档对象  
-        Workbook wb = null;  
+       
         if ("xls".equals(file.getFileType())) {  
             wb = new HSSFWorkbook();  
         }  
@@ -58,7 +61,7 @@ public class POIReadAndWriteTool {
         }  
         //创建sheet对象  
         Sheet sheet1 = (Sheet) wb.createSheet("服务器总表");
-         
+        
         writeHostListToSheet( hostList,  sheet1);
         //将主机详细信息写入文件
         writeHostListToWorkbook( hostList, wb );
@@ -70,6 +73,24 @@ public class POIReadAndWriteTool {
         //关闭文件流  
         stream.close();  
     }
+    /** 
+     * 设置字体 
+     * @param wb 
+     * @return 
+     */  
+    public static Font createFonts(){  
+        //创建Font对象  
+        Font font = wb.createFont();  
+        //设置字体  
+        font.setFontName("黑体");  
+        //着色  
+       // font.setColor(HSSFColor.BLUE.index);  
+        //斜体  
+        //font.setItalic(true);  
+        //字体大小  
+        font.setFontHeight((short)300);  
+        return font;  
+    }  
     /**
      * 每一个主机的信息在工作簿中占一个工作表
      * @author HP
@@ -167,7 +188,7 @@ public class POIReadAndWriteTool {
         //打印页面标题
         Cell cell = row.createCell(0);  
         cell.setCellValue(title);
-        
+      
     }
     
     /**
@@ -234,6 +255,11 @@ public class POIReadAndWriteTool {
     	
         Cell cell = row.createCell(cellNum);  
         cell.setCellValue(cellValue);
+        /*CellStyle cellStyle = wb.createCellStyle();
+        cellStyle.setFont(createFonts());
+         
+        cell.setCellStyle(cellStyle);*/
+        
     }
     public  void read(String path,String fileName,String fileType) throws IOException  
     {  

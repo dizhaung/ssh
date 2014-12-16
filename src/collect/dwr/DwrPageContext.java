@@ -2,6 +2,8 @@ package collect.dwr;
 
 import java.util.Collection;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.directwebremoting.ScriptBuffer;
 import org.directwebremoting.ScriptSession;
 import org.directwebremoting.WebContext;
@@ -10,20 +12,27 @@ import org.directwebremoting.proxy.dwr.Util;
 
 public class DwrPageContext {
 
+	private static Log logger = LogFactory.getLog(DwrPageContext.class);
 	public static WebContext contex;
 	public static Collection<ScriptSession> sessions ;
 	public static  Util util;
 	public static String functionName;
+	/**
+	 * 
+	 * @param pagePath		要推送的页面页面
+	 * @param functionName		推送消息到页面上，处理消息的回调函数
+	 */
     @SuppressWarnings("deprecation")  
     public void init(String pagePath,String functionName){  
         //得到上下文  
-        contex = WebContextFactory.get();  
-        System.out.println(pagePath);  
-        //得到要推送到 的页面  dwr3为项目名称 ， 一定要加上。  
-        sessions = contex.getScriptSessionsByPage(pagePath);  
-          
-        //不知道该怎么解释这个 ，   
-         util = new Util(sessions);  
+        contex = WebContextFactory.get();
+        String rootPath = contex.getServletContext().getContextPath();
+       
+        //得到要推送到 的页面  dwr3为项目名称
+        sessions = contex.getScriptSessionsByPage(rootPath+pagePath);  
+        logger.info(rootPath+pagePath);
+        //
+        util = new Util(sessions);  
         this.functionName = functionName;  
         
     }

@@ -293,7 +293,7 @@
   						<%
   							List<Host.Middleware.App> appList = mw.getAppList();
   							if(appList.size()>0){
-  								int i = 1;
+  								i = 1;
   								for(Host.Middleware.App app:appList){
   						%>
   							<tr>

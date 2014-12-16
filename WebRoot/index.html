@@ -7,8 +7,9 @@
     <title>主机信息采集页</title>
 
     <!-- Bootstrap -->
-    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
-
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 控制进度条等样式 -->
+	<link href="css/style.css"   rel="stylesheet"/>
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
@@ -26,7 +27,11 @@
   		<button id="poll" class="btn  btn-primary  " type="button">执&nbsp;&nbsp;行</button>
   		<button id="export" class="btn  btn-primary pull-right" type="button">导&nbsp;&nbsp;出</button>
 		 
-			<div class="progress"><div id="progressBar" class="progress-bar" style="width:0;">0/0</div></div>
+			<div class="progress">
+				<div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;">88的8</div>
+			
+			</div>
+			
 		 
 	</p>
 
@@ -64,13 +69,14 @@
     
     <script type="text/javascript">
 	   
-		//	
+		//实时显示采集进度
 		function show(msg){  
 			console.log(msg);
 			msg = JSON.parse(msg);
 			 
 		   var progressBar =  $("#progressBar");
-		   progressBar.text('当前进度 '+msg.nowNum+"/"+msg.maxNum+"	当前IP:"+msg.ip); 
+		   var progressBarLabel = $("#progressBar");
+		   progressBarLabel.text('当前进度 '+msg.nowNum+"/"+msg.maxNum+"		"+msg.ip); 
 		   msg.maxNum == 0?progressBar.css('width','100%'):progressBar.css('width',msg.nowNum/msg.maxNum*100+'%')
 		}  
     	$(document).ready(function(){
@@ -87,7 +93,7 @@
     			var tBody = $('table tbody');
     			tBody.html('');
     			//初始化到这个页面的DWR推上下文环境
-    			DWRContexInitor.init("/ssh/index.html","show");  
+    			DWRContexInitor.init("/index.html","show");  
 	      		
     			$.post('/ssh/collect',function(data){
     				data = JSON.parse(data);
