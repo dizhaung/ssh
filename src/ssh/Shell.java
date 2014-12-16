@@ -137,7 +137,11 @@ public class Shell {
         if(expect==null){
             return false;
         }
-       
+        
+        //没有特别的正则   则使用匹配命令提示的标准正则
+    	if(linuxPromptRegex == null){
+    		linuxPromptRegex = LINUX_PROMPT_REGEX_TEMPLATE;
+    	}
         logger.debug("----------Running commands are listed as follows:----------");
         for(String command:commands){
         	logger.debug(command);
@@ -152,13 +156,15 @@ public class Shell {
                                                         // buffer for appending
                                                         // output of executed
                                                         // command
-              
+               logger.info("buffer="+buffer);
                expectState.exp_continue();
                 
             }
         };
         List<Match> lstPattern = new ArrayList<Match>();
-        String[] regEx = linuxPromptRegEx;
+        String[] regEx = linuxPromptRegex;
+      //去掉特殊正则，默认回归标准的提示符匹配的正则
+    	linuxPromptRegex = null;
         if (regEx != null && regEx.length > 0) {
             synchronized (regEx) {
                 for (String regexElement : regEx) {// list of regx like, :>, />
@@ -253,15 +259,71 @@ public class Shell {
         }
     }
    
-    
-    public static String[] linuxPromptRegEx = new String[] { "~]#", "~#", "#",
+    public void setLinuxPromptRegex(String[] linuxPromptRegex){
+    	this.linuxPromptRegex = linuxPromptRegex;
+    }
+    /**
+     * 采用标准提示符匹配的正则和特殊正则来构造
+     * @param template
+     * @param specific
+     * @return
+     */
+    public String[] getPromptRegexArrayByTemplateAndSpecificRegex(final String[] template,final String[] specific){
+    	String[] regexArray = new String[template.length+specific.length];
+    	System.arraycopy(template, 0, regexArray, 0, template.length);
+    	System.arraycopy(specific, 0, regexArray, template.length, specific.length);
+    	return regexArray;
+    }
+    public final static String[] LINUX_PROMPT_REGEX_TEMPLATE = new String[] { "~]#", "~#", "#",
         ":~#", "/$", ">","SQL>","\\$"};
-
+    private String[] linuxPromptRegex = null;
     public static void main(String[] args) throws UnsupportedEncodingException, InterruptedException{
     
-    	String userDir = System.getProperty("user.dir");
+    	
     	List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		
+    	//主机负载均衡
+		///加载负载均衡配置
+		List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
+		System.out.println(loadBalancerList);
+		
+		///连接每个负载获取负载信息
+		StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
+		for(LoadBalancer lb: loadBalancerList){
+			Shell sshLoadBalancer;
+			try {
+				sshLoadBalancer = new Shell(lb.getIp(), SSH_PORT,lb.getUserName(), lb.getPassword());
+			} catch (ShellException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				logger.info("无法登陆到		"+lb.getIp());
+				continue;
+			}
+			sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
+			
+			List<String> cmdsToExecute = new ArrayList<String>();
+			
+			String cmdResult;
+			sshLoadBalancer.executeCommands(new String[]{"system config immediate"," "});
+			cmdResult = sshLoadBalancer.getResponse();
+			logger.info(cmdResult);
+
+			/*logger.info("-------执行下一组命令----------");
+			sshLoadBalancer.executeCommands(new String[]{"\n"});
+			cmdResult = sshLoadBalancer.getResponse();
+			logger.info(cmdResult);*/
+			/*
+			sshLoadBalancer.executeCommands(new String[]{"system config immediate"});
+			cmdResult = sshLoadBalancer.getResponse();
+			logger.info(cmdResult);*/
+			
+			sshLoadBalancer.disconnect();
+			
+			allLoadBalancerFarmAndServerInfo.append(cmdResult);
+		}
+    	
+    	
+    	
 		for (Host h : list) {
 			System.out.println(h);
 
@@ -286,15 +348,24 @@ public class Shell {
 				continue;
 			}
 		
-		
+			//切换到root用户 ，提升权限
+			shell.executeCommands(new String[] { "su -" });
+			String cmdResult = shell.getResponse();
+			
+			logger.info(cmdResult);
+			///模拟输入root密码
+			shell.setLinuxPromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"Password:"}));
+			shell.executeCommands(new String[] { rootUserPassword });
+			cmdResult = shell.getResponse();
 				
+			logger.info(cmdResult);
 			
 			// 初始化服务器连接信息(特殊情况使用，每执行一个命令连接一次)
 			SSHClient ssh = new SSHClient(ip, jkUser, jkUserPassword);
 			
+			
 			shell.executeCommands(new String[] { "uname" });
-		
-			String cmdResult = shell.getResponse();
+			cmdResult = shell.getResponse();
 			//获取操作系统的类型
 			
 			System.out.println(cmdResult);
@@ -429,24 +500,9 @@ public class Shell {
 					}
 				
 				}*/
-				/*//主机负载均衡
-				///加载负载均衡配置
-				List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
-				System.out.println(loadBalancerList);
 				
-				///连接每个负载获取负载信息
-				StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
-				for(LoadBalancer lb: loadBalancerList){
-					SSHClient sshLoadBalancer = new SSHClient(lb.getIp(), lb.getUserName(), lb.getPassword());
-					sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"User:","Password:"}));
-					List<String> cmdsToExecute = new ArrayList<String>();
-					cmdsToExecute.add("appdirector farm server table");
-					
-					cmdResult = ssh.execute(cmdsToExecute);
-					allLoadBalancerFarmAndServerInfo.append(cmdResult);
-				}*/
 				
-				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+				/*shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
 				String[] lines = cmdResult.split("[\r\n]+");
@@ -455,7 +511,7 @@ public class Shell {
 					//部署路径
 					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
 					String userProjectsDirSource = cmdResult;
-					/*//weblogic版本
+					//weblogic版本
 					String version = parseInfoByRegex("([\\d.]+)$",deploymentDir);
 					
 					System.out.println(deploymentDir+"="+version);
@@ -463,11 +519,11 @@ public class Shell {
 					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult)+" -version" });
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
-					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);*/
+					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);
 					
 					//应用名称及其部署路径
 					SSHClient.collectWeblogicAppListForAIX(shell, userProjectsDirSource); 
-				}
+				}*/
 				
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				/*//CPU个数
