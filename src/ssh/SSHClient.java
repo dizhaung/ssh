@@ -2,6 +2,7 @@ package ssh;
 
 import host.FileManager;
 import host.Host;
+import host.LoadBalancer;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -244,10 +245,43 @@ public class SSHClient {
     public static void startCollect(List<Host> list){
     	//向用户传递采集进度
     	int maxNum = list.size();
+    	StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
     	if(maxNum == 0){
     		HintMsg msg = new HintMsg(0,0,"无");
     		DwrPageContext.run(JSONObject.fromObject(msg).toString());
     		logger.info(msg);
+    	}else{
+    	 	//获取负载均衡配置文件
+    		///加载负载均衡配置
+    		List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
+    		System.out.println(loadBalancerList);
+    		
+    		///连接每个负载获取负载信息
+    		
+    		for(LoadBalancer lb: loadBalancerList){
+    			Shell sshLoadBalancer;
+    			try {
+    				sshLoadBalancer = new Shell(lb.getIp(), SSH_PORT,lb.getUserName(), lb.getPassword());
+    			} catch (ShellException e) {
+    				// TODO Auto-generated catch block
+    				e.printStackTrace();
+    				logger.error("无法登陆到		"+lb.getIp());
+    				continue;
+    			}
+    			sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
+    			
+    			List<String> cmdsToExecute = new ArrayList<String>();
+    			
+    			String cmdResult;
+    			sshLoadBalancer.executeCommands(new String[]{"system config immediate"});
+    			cmdResult = sshLoadBalancer.getResponse();
+    			logger.info(cmdResult);
+    	
+    			sshLoadBalancer.disconnect();
+    			
+    			allLoadBalancerFarmAndServerInfo.append(cmdResult);
+    		}
+    		
     	}
     	int nowNum = 0;
     	for (Host h : list) {
@@ -431,7 +465,21 @@ public class SSHClient {
 					hostDetail.setIsCluster("否");
 					hostDetail.setClusterServiceIP("NONE");
 				}
+				//是否负载均衡
+				///正则匹配出Farm
+				String  farm = shell.parseInfoByRegex("appdirector farm server table create (.*?) "+h.getIp(), allLoadBalancerFarmAndServerInfo.toString(),1);
 				
+				//负载均衡上的虚地址
+				if(!"NONE".equals(farm)){
+					hostDetail.setLoadBalancedVirtualIP(shell.parseInfoByRegex("appdirector l4-policy table create (.*?) (TCP|UDP) \\d{1,5} (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn "+farm, allLoadBalancerFarmAndServerInfo.toString(),1));
+					hostDetail.setIsLoadBalanced("是");
+		    	    
+				}else{
+					hostDetail.setLoadBalancedVirtualIP("无");
+					hostDetail.setIsLoadBalanced("否");
+		    	    
+				}
+	    		
 				//获取网卡信息
 				shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
 				cmdResult = shell.getResponse();
