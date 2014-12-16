@@ -456,7 +456,19 @@ public class Host {
 	        	
 	        	//每个数据库的数据文件列表
 	        	 table = new  LinkedList();
-	        	  List<Database.DataFile> dfList = db.getDfList();
+	        	 ///标题
+	        	 tr = new  LinkedList();
+		   		  tr.add("数据库数据文件列表");
+		   		  table.add(tr);
+		   		  ///表头
+		   		  tr = new  LinkedList();
+		   		 tr.add("序号");
+		   		 tr.add("文件路径");
+		   		 tr.add("文件大小");
+		   		  table.add(tr);
+		   		  
+		   		  ///表体
+		        	  List<Database.DataFile> dfList = db.getDfList();
 	        	  int i  = 0;
 	        	  for(Database.DataFile df:dfList){
 	        		  tr = new  LinkedList();
@@ -478,7 +490,7 @@ public class Host {
 	public List<List<List<String>>> reverseMiddlewareList(){
 		List<List<List<String>>>  tables = new LinkedList();
 		  if(mList != null){
-	        for(Host.Middleware mw:mList){
+	        for(Middleware mw:mList){
 	        	//每个中间件的基本信息
 	        	List<List<String>> table = new  LinkedList();
 	        	List< String> tr = new  LinkedList();
@@ -500,7 +512,25 @@ public class Host {
 	        	
 	        	//每个中间件的应用列表
 	        	 table = new  LinkedList();
-	        	 
+	        	 ///标题
+	        	 tr = new  LinkedList();
+	        	 tr.add("应用列表");
+	        	 table.add(tr);
+	        	 ///表头
+	        	 tr = new  LinkedList();
+	        	 tr.add("序号");
+	        	 tr.add("应用名称");
+	        	 tr.add("部署路径");
+	        	 table.add(tr);
+	        	 ///表体
+	        	 int i = 1;
+	        	 for(Middleware.App app:mw.getAppList()){
+	        		 tr = new  LinkedList();
+		        	 tr.add(""+i++);
+		        	 tr.add(app.getAppName());
+		        	 tr.add(app.getDir());
+		        	 table.add(tr);
+	        	 }
 	        	tables.add(table);
 	        	
 	        }
