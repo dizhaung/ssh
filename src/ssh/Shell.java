@@ -43,7 +43,7 @@ public class Shell {
     private Session session;
     private ChannelShell channel;
     private  Expect4j expect = null;
-    private static final long DEFAULT_TIME_OUT = 2*1000;
+    private static final long DEFAULT_TIME_OUT = 12*1000;
     public  StringBuffer buffer= null;
     
     public static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
@@ -83,6 +83,10 @@ public class Shell {
         if(session!=null){
             session.disconnect();
         }
+        if(expect != null){
+        	expect.close();
+        }
+        
     }
     
 
@@ -149,21 +153,16 @@ public class Shell {
         logger.debug("----------End----------");
         
         Closure closure = new Closure() {
-            public void run(ExpectState expectState) throws Exception {
+            public void run(ExpectState state) throws Exception {
             	//匹配到模式串的情况下，例如：#等等待输入命令的提示符时，输出执行的命令和返回的信息
             	//System.out.println(expectState.getBuffer());
-                buffer.append(expectState.getBuffer());// buffer is string
-                                                        // buffer for appending
-                                                        // output of executed
-                                                        // command
-               logger.info("buffer="+buffer);
-               expectState.exp_continue();
-                
+                buffer.append(state.getBuffer()); 
+                state.exp_continue();
             }
         };
         List<Match> lstPattern = new ArrayList<Match>();
         String[] regEx = linuxPromptRegex;
-      //去掉特殊正则，默认回归标准的提示符匹配的正则
+        //去掉特殊正则，默认回归标准的提示符匹配的正则
     	linuxPromptRegex = null;
         if (regEx != null && regEx.length > 0) {
             synchronized (regEx) {
@@ -172,7 +171,24 @@ public class Shell {
                                                     // command prompts of your
                                                     // remote machine
                     try {
-                        RegExpMatch mat = new RegExpMatch(regexElement, closure);
+                    	RegExpMatch mat  = null;
+                    	//匹配到   --More--  代表执行结果无法在一页输出，需要键入  空格  翻页输出
+                        if("--More--".equals(regexElement)){
+                        	 mat = new RegExpMatch(regexElement, new Closure(){
+
+								@Override
+								public void run(ExpectState state) throws Exception {
+									// TODO Auto-generated method stub
+									buffer.append(state.getBuffer());
+									expect.send(" ");   //翻页命令
+						            logger.info(state.getMatch());
+						            state.exp_continue();
+								}
+                        	 });
+                        }else{
+                        	 mat = new RegExpMatch(regexElement, closure);
+                        }
+                        
                         lstPattern.add(mat);
                     } catch (MalformedPatternException e) {
                         return false;
@@ -182,8 +198,25 @@ public class Shell {
                 }
                
                 lstPattern.add(new TimeoutMatch(DEFAULT_TIME_OUT, new Closure() {
-                    public void run(ExpectState state) {
-                    }
+
+					@Override
+					public void run(ExpectState state) throws Exception {
+						// TODO Auto-generated method stub
+						  
+                    	logger.info("---expect 等待输出超时---");
+		                     
+					}
+                  
+                }));
+                //
+                lstPattern.add(new EofMatch(new Closure(){
+
+					@Override
+					public void run(ExpectState state) throws Exception {
+						// TODO Auto-generated method stub
+						logger.info("---expect 匹配到输出结束---");
+					}
+                	
                 }));
             }
         }
@@ -296,7 +329,7 @@ public class Shell {
 			} catch (ShellException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-				logger.info("无法登陆到		"+lb.getIp());
+				logger.error("无法登陆到		"+lb.getIp());
 				continue;
 			}
 			sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
@@ -304,27 +337,20 @@ public class Shell {
 			List<String> cmdsToExecute = new ArrayList<String>();
 			
 			String cmdResult;
-			sshLoadBalancer.executeCommands(new String[]{"system config immediate"," "});
-			cmdResult = sshLoadBalancer.getResponse();
-			logger.info(cmdResult);
-
-			/*logger.info("-------执行下一组命令----------");
-			sshLoadBalancer.executeCommands(new String[]{"\n"});
-			cmdResult = sshLoadBalancer.getResponse();
-			logger.info(cmdResult);*/
-			/*
 			sshLoadBalancer.executeCommands(new String[]{"system config immediate"});
 			cmdResult = sshLoadBalancer.getResponse();
-			logger.info(cmdResult);*/
-			
+			logger.info(cmdResult);
+	
 			sshLoadBalancer.disconnect();
 			
 			allLoadBalancerFarmAndServerInfo.append(cmdResult);
 		}
+		 logger.info(parseInfoByRegex("appdirector farm server table create (.*?) 10.204.7.153", allLoadBalancerFarmAndServerInfo.toString(),1));
+    	 String s = allLoadBalancerFarmAndServerInfo.toString();
+		 logger.info(parseInfoByRegex("appdirector l4-policy table create (.*?) (TCP|UDP) \\d{1,5} (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn \"QC7.155_8020  \"", allLoadBalancerFarmAndServerInfo.toString(),1));
+	    	
     	
-    	
-    	
-		for (Host h : list) {
+		for (Host h : list) {/*
 			System.out.println(h);
 
 			// 设置参数
@@ -371,7 +397,7 @@ public class Shell {
 			System.out.println(cmdResult);
 			h.setOs(parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult,1));
 			if("AIX".equalsIgnoreCase(h.getOs())){
-				/*
+				
 				 //获取主机型号
 				shell.executeCommands(new String[] { "uname -M" });
 				cmdResult = shell.getResponse();
@@ -396,14 +422,14 @@ public class Shell {
 				cmdResult = shell.getResponse();
 				
 				System.out.print(version+"."+parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult));
-				*/
+				
 				//获取内存大小
-				/*shell.executeCommands(new String[] { "prtconf |grep \"Good Memory Size:\"" });
+				shell.executeCommands(new String[] { "prtconf |grep \"Good Memory Size:\"" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
 				System.out.print("内存大小"+parseInfoByRegex("\\s*prtconf \\|grep \"Good Memory Size:\"\r\n(.*)\r\n",cmdResult));
-				*/
-				/*//获取CPU个数
+				
+				//获取CPU个数
 				shell.executeCommands(new String[] { "prtconf |grep \"Number Of Processors:\"" });
 				cmdResult = shell.getResponse();
 				
@@ -440,9 +466,9 @@ public class Shell {
 					
 				}
 				System.out.println(cmdResult);
-				*/
-				/*System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));*/
-				/*//检测是否安装了Oracle数据库
+				
+				System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));
+				//检测是否安装了Oracle数据库
 				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
 				cmdResult = shell.getResponse();
 				boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
@@ -499,10 +525,10 @@ public class Shell {
 						dfList.add(dataFile);
 					}
 				
-				}*/
+				}
 				
 				
-				/*shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
 				String[] lines = cmdResult.split("[\r\n]+");
@@ -523,10 +549,10 @@ public class Shell {
 					
 					//应用名称及其部署路径
 					SSHClient.collectWeblogicAppListForAIX(shell, userProjectsDirSource); 
-				}*/
+				}
 				
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
-				/*//CPU个数
+				//CPU个数
 				shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
 				cmdResult = shell.getResponse();
 				
@@ -591,8 +617,8 @@ public class Shell {
 					}
 					
 				}
-				*/
-				/*//获取网卡信息
+				
+				//获取网卡信息
 				shell.executeCommands(new String[] { "ifconfig -a | grep \"^eth\"" });
 				cmdResult = shell.getResponse();
 				String[] eths = cmdResult.split("[\r\n]+");
@@ -605,7 +631,7 @@ public class Shell {
 					String typeStr = parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult,1);
 					String type = typeStr.indexOf("TP")!=-1?"电口":(typeStr.indexOf("FIBRE")!=-1?"光口":"未知");
 					System.out.println(type);
-				}*/
+				}
 				
 				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
 				cmdResult = shell.getResponse();
@@ -616,7 +642,7 @@ public class Shell {
 					//部署路径
 					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
 					String userProjectsDirSource = cmdResult;
-					/*//weblogic版本
+					//weblogic版本
 					String version = parseInfoByRegex("([\\d.]+)$",deploymentDir);
 					
 					System.out.println(deploymentDir+"="+version);
@@ -624,7 +650,7 @@ public class Shell {
 					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult)+" -version" });
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
-					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);*/
+					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);
 					
 					//应用名称及其部署路径
 					SSHClient.collectWeblogicAppListForLinux(shell, userProjectsDirSource);
@@ -634,7 +660,7 @@ public class Shell {
 			}
 			shell.disconnect();
 
-		}
+		*/}
     }
    
     
