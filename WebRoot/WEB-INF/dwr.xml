@@ -6,8 +6,7 @@
 		 
          <create creator="new" javascript="DWRContexInitor">
 			<param name="class">collect.dwr.DwrPageContext</param>
-			<include method="receive" />
-		<include method="init" />
+			<include method="init" />
 		</create>  
 	</allow>
 </dwr> 
