@@ -247,18 +247,22 @@ public class SSHClient {
     	int maxNum = list.size();
     	StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
     	if(maxNum == 0){
-    		HintMsg msg = new HintMsg(0,0,"无");
+    		HintMsg msg = new HintMsg(0,0,"无","");
     		DwrPageContext.run(JSONObject.fromObject(msg).toString());
     		logger.info(msg);
     	}else{
     	 	//获取负载均衡配置文件
     		///加载负载均衡配置
     		List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
-    		System.out.println(loadBalancerList);
+    		logger.info(loadBalancerList);
     		
     		///连接每个负载获取负载信息
-    		
+    		int loadBalanceNowNum = 0,loadBalanceMaxNum = loadBalancerList.size();
     		for(LoadBalancer lb: loadBalancerList){
+    			///负载均衡采集进度实时提示
+    			HintMsg msg = new HintMsg(loadBalanceNowNum++,loadBalanceMaxNum,"当前IP:"+lb.getIp(),"当前负载均衡配置文件下载进度");
+    			DwrPageContext.run(JSONObject.fromObject(msg).toString());
+    			logger.info(msg);
     			Shell sshLoadBalancer;
     			try {
     				sshLoadBalancer = new Shell(lb.getIp(), SSH_PORT,lb.getUserName(), lb.getPassword());
@@ -280,13 +284,16 @@ public class SSHClient {
     			sshLoadBalancer.disconnect();
     			
     			allLoadBalancerFarmAndServerInfo.append(cmdResult);
+    			
     		}
-    		
+    		HintMsg msg = new HintMsg(loadBalanceNowNum++,loadBalanceMaxNum,"下载完毕","当前负载均衡配置文件下载进度");
+			DwrPageContext.run(JSONObject.fromObject(msg).toString());
+			logger.info(msg);
     	}
     	int nowNum = 0;
     	for (Host h : list) {
-			System.out.println(h);
-			HintMsg msg = new HintMsg(nowNum++,maxNum,"当前IP:"+h.getIp());
+			logger.info(h);
+			HintMsg msg = new HintMsg(nowNum++,maxNum,"当前IP:"+h.getIp(),"当前主机采集进度");
 			DwrPageContext.run(JSONObject.fromObject(msg).toString());
 			logger.info(msg);
 			// 设置参数
@@ -572,11 +579,7 @@ public class SSHClient {
 					oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", shell.parseInfoByRegex("ORACLE_BASE=([^\r\n]+)",cmdResult,1)):oracleHomeDir;
 					 
 					db.setDeploymentDir(oracleHomeDir);
-					//找到版本
-					logger.info("---找到版本---");
-					logger.info("正则表达式		/((\\d+\\.?)+\\d*)/");
-					version = shell.parseInfoByRegex("/((\\d+\\.?)+\\d*)/|/(\\d+[g]?)/",oracleHomeDir,1);
-					db.setVersion(version);
+					
 					//找到实例名
 					 
 					logger.info("正则表达式		ORACLE_SID=([^\r\n]+)");
@@ -619,6 +622,15 @@ public class SSHClient {
 					 
 					logger.info("正则表达式		\\s+(/.*)\\s+");
 					logger.info("正则表达式		\\s+(\\d+MB)\\s+");
+					
+					//找到版本
+					logger.info("---找到版本---");
+					shell.executeCommands(new String[] {"select version from v$instance;"  });
+					cmdResult = shell.getResponse();
+					logger.info(cmdResult);
+					logger.info("正则表达式		((\\d+\\.?)+\\d*)");
+					version = shell.parseInfoByRegex("((\\d+\\.?)+\\d*)",cmdResult,1);
+					db.setVersion(version);
 					//由于进入了sqlplus模式，在此断开连接，退出重新登录
 					shell.disconnect();
 					
@@ -826,11 +838,7 @@ public class SSHClient {
 					String oracleHomeDir = shell.parseInfoByRegex("(/.+)/bin/tnslsnr",cmdResult,1);
 					
 					db.setDeploymentDir(oracleHomeDir);
-					//找到版本
-					 
-					logger.info("正则表达式		/((\\d+\\.?)+\\d*)/");
-					String version = shell.parseInfoByRegex("/((\\d+\\.?)+\\d*)/",oracleHomeDir,1);
-					db.setVersion(version);
+					
 					//找到实例名
 					shell.executeCommands(new String[] { "echo $ORACLE_SID" });
 					cmdResult = shell.getResponse();
@@ -872,6 +880,25 @@ public class SSHClient {
 							dataFile.setFileSize(sizeMatcher.group(1));
 						 
 						dfList.add(dataFile);
+					}
+					
+					//找到版本
+					logger.info("---找到版本---");
+					shell.executeCommands(new String[] {"select version from v$instance;"  });
+					cmdResult = shell.getResponse();
+					logger.info(cmdResult);
+					logger.info("正则表达式		((\\d+\\.?)+\\d*)");
+					String version = shell.parseInfoByRegex("((\\d+\\.?)+\\d*)",cmdResult,1);
+					db.setVersion(version);
+					//由于进入了sqlplus模式，在此断开连接，退出重新登录
+					shell.disconnect();
+					
+					// 建立连接
+					try {
+						shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
+					} catch (ShellException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
 				}
 				
@@ -918,11 +945,11 @@ public class SSHClient {
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
 			}
-			System.out.println(h);
+			logger.info(h);
 			shell.disconnect();
 
 		}
-    	HintMsg msg = new HintMsg(nowNum,maxNum,"采集完毕");
+    	HintMsg msg = new HintMsg(nowNum,maxNum,"采集完毕","当前主机采集进度");
 		DwrPageContext.run(JSONObject.fromObject(msg).toString());
     }
     
