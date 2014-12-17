@@ -43,7 +43,7 @@ public class Shell {
     private Session session;
     private ChannelShell channel;
     private  Expect4j expect = null;
-    private static final long DEFAULT_TIME_OUT = 12*1000;
+    private static final long DEFAULT_TIME_OUT = 2*1000;
     public  StringBuffer buffer= null;
     
     public static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
@@ -315,7 +315,7 @@ public class Shell {
     	
     	List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		
-    	//主机负载均衡
+    	/*//主机负载均衡
 		///加载负载均衡配置
 		List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
 		System.out.println(loadBalancerList);
@@ -348,9 +348,9 @@ public class Shell {
 		 logger.info(parseInfoByRegex("appdirector farm server table create (.*?) 10.204.7.153", allLoadBalancerFarmAndServerInfo.toString(),1));
     	 String s = allLoadBalancerFarmAndServerInfo.toString();
 		 logger.info(parseInfoByRegex("appdirector l4-policy table create (.*?) (TCP|UDP) \\d{1,5} (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn \"QC7.155_8020  \"", allLoadBalancerFarmAndServerInfo.toString(),1));
-	    	
+	    */	
     	
-		for (Host h : list) {/*
+		for (Host h : list) {
 			System.out.println(h);
 
 			// 设置参数
@@ -398,59 +398,59 @@ public class Shell {
 			h.setOs(parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult,1));
 			if("AIX".equalsIgnoreCase(h.getOs())){
 				
-				 //获取主机型号
+				/* //获取主机型号
 				shell.executeCommands(new String[] { "uname -M" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print(parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult));
+				System.out.print(parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult,1));
 				
 				
 				//获取主机名
 				shell.executeCommands(new String[] { "uname -n" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print(parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult));
+				System.out.print(parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
 				
 				//获取系统版本号
 				
 				shell.executeCommands(new String[] { "uname -v" });
 				cmdResult = shell.getResponse();
 				
-				String version = parseInfoByRegex("\\s*uname -v\r\n(.*)\r\n",cmdResult);
+				String version = parseInfoByRegex("\\s*uname -v\r\n(.*)\r\n",cmdResult,1);
 				
 				shell.executeCommands(new String[] { "uname -r" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print(version+"."+parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult));
+				System.out.print(version+"."+parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult,1));
 				
 				//获取内存大小
 				shell.executeCommands(new String[] { "prtconf |grep \"Good Memory Size:\"" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
-				System.out.print("内存大小"+parseInfoByRegex("\\s*prtconf \\|grep \"Good Memory Size:\"\r\n(.*)\r\n",cmdResult));
+				System.out.print("内存大小"+parseInfoByRegex("\\s*prtconf \\|grep \"Good Memory Size:\"\r\n(.*)\r\n",cmdResult,1));
 				
 				//获取CPU个数
 				shell.executeCommands(new String[] { "prtconf |grep \"Number Of Processors:\"" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print("CPU个数"+parseInfoByRegex("\\s*prtconf |grep \"Number Of Processors:\"\r\n(.*)\r\n",cmdResult));
+				System.out.print("CPU个数"+parseInfoByRegex("\\s*prtconf |grep \"Number Of Processors:\"\r\n(.*)\r\n",cmdResult,1));
 				//获取CPU频率
 				shell.executeCommands(new String[] { "prtconf |grep \"Processor Clock Speed:\"" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print("CPU频率"+parseInfoByRegex("\\s*prtconf |grep \"Processor Clock Speed:\"\r\n(.*)\r\n",cmdResult));
+				System.out.print("CPU频率"+parseInfoByRegex("\\s*prtconf |grep \"Processor Clock Speed:\"\r\n(.*)\r\n",cmdResult,1));
 				
 				//获取CPU核数
 				shell.executeCommands(new String[] { "bindprocessor -q" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print("CPU核数"+parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));
+				System.out.print("CPU核数"+parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult,1));
 				
 				//获取CPU核数
 				shell.executeCommands(new String[] { "bindprocessor -q" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));
+				System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult,1));
 				
 				
 				//获取网卡信息
@@ -460,14 +460,16 @@ public class Shell {
 				///数组中第一个元素是输入的命令  最后一个元素是命令执行之后的提示符，过滤掉不予解析
 				for(int i = 1,size = ents.length;i<size-1;i++){
 					//提取网卡的名字
-					System.out.print(parseInfoByRegex("^(ent\\d+)",ents[i]));
+					System.out.print(parseInfoByRegex("^(ent\\d+)",ents[i],1));
 					System.out.println(ents[i].indexOf("-SX"));//带有-SX为光口
 					//提取网卡的类型（光口 or 电口）
 					
 				}
 				System.out.println(cmdResult);
 				
-				System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult));
+				System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult,1));
+				
+				*/
 				//检测是否安装了Oracle数据库
 				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
 				cmdResult = shell.getResponse();
@@ -478,28 +480,28 @@ public class Shell {
 					//找到oracle用户的目录
 					shell.executeCommands(new String[] { "cat /etc/passwd|grep oracle" });
 					cmdResult = shell.getResponse();
-					String oracleUserDir = parseInfoByRegex(":(/.+):",cmdResult);
+					String oracleUserDir = parseInfoByRegex(":(/.+):",cmdResult,1);
 					
 					//找到oracle的安装目录
 					shell.executeCommands(new String[] { "cat "+oracleUserDir+"/.profile" });
 					cmdResult = shell.getResponse();
 					
-					String oracleHomeDir = parseInfoByRegex("ORACLE_HOME=([^\r\n]+)",cmdResult);
+					String oracleHomeDir = parseInfoByRegex("ORACLE_HOME=([^\r\n]+)",cmdResult,1);
 					System.out.println(oracleHomeDir);
-					oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", parseInfoByRegex("ORACLE_BASE=([^\r\n]+)",cmdResult)):oracleHomeDir;
+					oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", parseInfoByRegex("ORACLE_BASE=([^\r\n]+)",cmdResult,1)):oracleHomeDir;
 					System.out.println(oracleHomeDir);
 					
 					//找到实例名
-					String oracleSid = parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult);
+					String oracleSid = parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult,1);
 					System.out.println(oracleSid);
 					
-					System.out.println("tnslsnr="+cmdResult);
+					/*System.out.println("tnslsnr="+cmdResult);
 					//找到数据库文件文件的目录
 					List<String> cmdsToExecute  = new ArrayList<String>();
 					cmdsToExecute.add("su - oracle");
 					cmdsToExecute.add("select * from dual;");
 					cmdsToExecute.add("select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;" );
-					cmdResult = ssh.execute(cmdsToExecute);
+					cmdResult = ssh.execute(cmdsToExecute);*/
 					shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
@@ -524,11 +526,28 @@ public class Shell {
 						System.out.println(dataFile);
 						dfList.add(dataFile);
 					}
-				
+					//找到版本
+					logger.info("---找到版本---");
+					shell.executeCommands(new String[] {"select version from v$instance;"  });
+					cmdResult = shell.getResponse();
+					logger.info(cmdResult);
+					logger.info("正则表达式		((\\d+\\.?)+\\d*)");
+					String version = shell.parseInfoByRegex("((\\d+\\.?)+\\d*)",cmdResult,1);
+					logger.info("version="+version);
+					//由于进入了sqlplus模式，在此断开连接，退出重新登录
+					shell.disconnect();
+					
+					// 建立连接
+					try {
+						shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
+					} catch (ShellException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 				}
 				
 				
-				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+				/*shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
 				String[] lines = cmdResult.split("[\r\n]+");
@@ -538,25 +557,25 @@ public class Shell {
 					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
 					String userProjectsDirSource = cmdResult;
 					//weblogic版本
-					String version = parseInfoByRegex("([\\d.]+)$",deploymentDir);
+				    version = parseInfoByRegex("([\\d.]+)$",deploymentDir,1);
 					
 					System.out.println(deploymentDir+"="+version);
 					//JDK版本
-					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult)+" -version" });
+					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
-					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);
+					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
 					
 					//应用名称及其部署路径
 					SSHClient.collectWeblogicAppListForAIX(shell, userProjectsDirSource); 
-				}
+				}*/
 				
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				//CPU个数
 				shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
 				cmdResult = shell.getResponse();
 				
-				System.out.print(parseInfoByRegex("\\s+(\\d+)\\s+",cmdResult));
+				System.out.print(parseInfoByRegex("\\s+(\\d+)\\s+",cmdResult,1));
 				
 				//CPU核数
 				shell.executeCommands(new String[] { "cat /proc/cpuinfo | grep \"cpu cores\"" });
@@ -574,7 +593,7 @@ public class Shell {
 				shell.executeCommands(new String[] { "lsb_release -a |grep \"Description\"" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
-				System.out.print(parseInfoByRegex("[Dd]escription:\\s+(.+)",cmdResult));
+				System.out.print(parseInfoByRegex("[Dd]escription:\\s+(.+)",cmdResult,1));
 				
 				//主机型号
 				shell.executeCommands(new String[] { "dmidecode -s system-manufacturer" });
@@ -643,14 +662,14 @@ public class Shell {
 					String deploymentDir = parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
 					String userProjectsDirSource = cmdResult;
 					//weblogic版本
-					String version = parseInfoByRegex("([\\d.]+)$",deploymentDir);
+					String version = parseInfoByRegex("([\\d.]+)$",deploymentDir,1);
 					
 					System.out.println(deploymentDir+"="+version);
 					//JDK版本
-					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult)+" -version" });
+					shell.executeCommands(new String[] { parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
-					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult);
+					String jdkVersion = parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
 					
 					//应用名称及其部署路径
 					SSHClient.collectWeblogicAppListForLinux(shell, userProjectsDirSource);
@@ -660,7 +679,7 @@ public class Shell {
 			}
 			shell.disconnect();
 
-		*/}
+		}
     }
    
     
