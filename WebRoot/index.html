@@ -28,7 +28,7 @@
   		<button id="export" class="btn  btn-primary pull-right" type="button">导&nbsp;&nbsp;出</button>
 		 
 			<div class="progress">
-				<div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;">88的8</div>
+				<div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;"></div>
 			
 			</div>
 			
@@ -75,8 +75,8 @@
 			msg = JSON.parse(msg);
 			 
 		   var progressBar =  $("#progressBar");
-		   var progressBarLabel = $("#progressBar");
-		   progressBarLabel.text('当前进度 '+msg.nowNum+"/"+msg.maxNum+"		"+msg.ip); 
+		   var progressBarLabel = progressBar;
+		   progressBarLabel.text(msg.msg+msg.nowNum+"/"+msg.maxNum+"		"+msg.ip); 
 		   msg.maxNum == 0?progressBar.css('width','100%'):progressBar.css('width',msg.nowNum/msg.maxNum*100+'%')
 		}  
     	$(document).ready(function(){
