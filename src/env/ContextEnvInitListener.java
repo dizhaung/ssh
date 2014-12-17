@@ -4,7 +4,8 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
 /**
- * Application Lifecycle Listener implementation class TrapServiceInitListener
+ * 初始化log4j日志文件输出根路径
+ * @author HP
  *
  */
 public class ContextEnvInitListener implements ServletContextListener {
