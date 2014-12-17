@@ -1,9 +1,0 @@
-#工单数据库1|10.204.4.48|db570a|jk|qwer1234|root|oagddb48
-#工单数据库2|10.204.4.49|db570b|qwer1234|root|oagddb49
-#工单Blog应用服务器1|10.204.4.32|jk|1234qwer|root|oaapp4.32
-#工单Blog应用服务器2|10.204.4.33|jk|1234qwer|root|oaapp4.32
-#公文工作流引擎服务器1|10.204.4.35|jk|jk123qwe|root|oagw4.35
-#公文工作流引擎服务器2|10.204.4.36|jk|jk123qwe|root|oagw4.36
-#网管服务器|10.210.42.5|root|wgIDC123!@#|root|wgIDC123!@#
-测试服务器1应用（weblogic服务器）|10.204.16.150|root|root150|root|root150
-测试服务器2数据库|10.204.16.151|root|root151|root|root151
