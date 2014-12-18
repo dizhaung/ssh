@@ -285,6 +285,672 @@ public class SSHClient {
     	
     	
     }
+    
+    private static void collectLinux( Shell shell,final SSHClient ssh,Host h,final String allLoadBalancerFarmAndServerInfo){
+
+		
+		
+		Host.HostDetail hostDetail = new Host.HostDetail();
+		h.setDetail(hostDetail);
+		hostDetail.setOs(h.getOs());//主机详细信息页的操作系统类型
+		
+		
+		
+		//获取主机型号
+		shell.executeCommands(new String[] { "dmidecode -s system-manufacturer" });//root用户登录
+		String cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		
+		String manufacturer = cmdResult.split("[\r\n]+")[1].trim();
+		
+		shell.executeCommands(new String[] { "dmidecode -s system-product-name" });
+		cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		 
+		hostDetail.setHostType(manufacturer+" "+cmdResult.split("[\r\n]+")[1].trim());
+		//获取主机名
+		shell.executeCommands(new String[] { "uname -n" });
+		cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		logger.info("正则表达式		\\s*uname -n\r\n(.*)\r\n");
+		System.out.print(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
+		hostDetail.setHostName(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
+		//获取系统版本号
+		shell.executeCommands(new String[] { "lsb_release -a |grep \"Description\"" });
+		cmdResult = shell.getResponse();
+
+		logger.info(cmdResult);
+		logger.info("正则表达式		[Dd]escription:\\s+(.+)");
+		hostDetail.setOsVersion(shell.parseInfoByRegex("[Dd]escription:\\s+(.+)",cmdResult,1));
+		
+		//CPU个数
+		shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
+		cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		logger.info("正则表达式		\\s+(\\d+)\\s+");
+		hostDetail.setCPUNumber(shell.parseInfoByRegex("\\s+(\\d+)\\s+",cmdResult,1));
+		
+		//CPU核数
+		shell.executeCommands(new String[] { "cat /proc/cpuinfo | grep \"cpu cores\"" });
+		cmdResult = shell.getResponse();
+
+		logger.info(cmdResult);
+		logger.info("正则表达式		cpu\\s+cores\\s+:\\s+(\\d+)\\s*");
+		hostDetail.setLogicalCPUNumber(parseLogicalCPUNumber("cpu\\s+cores\\s+:\\s+(\\d+)\\s*",cmdResult));
+		
+		//CPU主频
+		shell.executeCommands(new String[] { "dmidecode -s processor-frequency" });
+		cmdResult = shell.getResponse();
+
+		logger.info(cmdResult);
+		 
+		hostDetail.setCPUClockSpeed(cmdResult.split("[\r\n]+").length>=1?cmdResult.split("[\r\n]+")[1]:"NONE");
+		
+		//内存大小
+		shell.executeCommands(new String[] { "free -m" });
+		cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		 
+		hostDetail.setMemSize(cmdResult.split("[\r\n]+").length>=2?cmdResult.split("[\r\n]+")[2].trim().split("\\s+")[1].trim()+" MB":"NONE");
+		
+		//获取网卡信息
+		
+		shell.executeCommands(new String[] { "ifconfig -a | grep \"^eth\"" });
+		cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		 
+		String[] eths = cmdResult.split("[\r\n]+");
+		List<Host.HostDetail.NetworkCard> cardList = new ArrayList<Host.HostDetail.NetworkCard>();
+		if(eths.length>=3){
+			for(int i = 1,size=eths.length-1;i<size;i++){
+				
+				String eth = shell.parseInfoByRegex("^(eth\\d+)",eths[i],1);
+				shell.executeCommands(new String[]{"ethtool "+eth+"| grep \"Supported ports\""});
+				cmdResult = shell.getResponse();
+				
+				logger.info(cmdResult);
+				logger.info("正则表达式		Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]");
+				 
+				String typeStr = shell.parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult,1);
+				String ifType = typeStr.indexOf("TP")!=-1?"电口":(typeStr.indexOf("FIBRE")!=-1?"光口":"未知");
+				Host.HostDetail.NetworkCard card = new Host.HostDetail.NetworkCard();
+				card.setCardName(eth);
+				card.setIfType(ifType);
+				cardList.add(card);
+			}
+			hostDetail.setCardList(cardList);
+		}
+		
+		
+		//获取挂载点信息
+		shell.executeCommands(new String[] { "df -m" });
+		cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		 
+		String[] diskFSEntries = cmdResult.split("\n");
+					//滤掉磁盘信息的表格头
+		List<Host.HostDetail.FileSystem> fsList = new ArrayList();
+		for(int i = 2,size = diskFSEntries.length-1;i<size;i++){
+			String[] entry = diskFSEntries[i].split("\\s+");
+			
+			if(entry!=null && entry.length == 6){
+				Host.HostDetail.FileSystem fs = new Host.HostDetail.FileSystem();
+				
+				fs.setMountOn(entry[5]);
+				fs.setBlocks(entry[1]+" MB");
+				fs.setUsed(entry[4]);
+				
+				fsList.add(fs);
+				
+			}
+			
+		}
+		hostDetail.setFsList(fsList);
+		
+		
+		//检测是否安装了Oracle数据库
+
+		List<Host.Database> dList = new ArrayList<Host.Database>();
+		h.setdList(dList);
+		shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
+		cmdResult = shell.getResponse();
+		logger.info(cmdResult);
+		 
+		boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
+		
+		//安装有Oracle
+		if(isExist){
+			Host.Database db = new Host.Database();
+			dList.add(db);
+			//
+			db.setType("Oracle");
+			db.setIp(h.getIp());
+		
+			//找到oracle的安装目录
+			 
+			logger.info("正则表达式		(/.+)/bin/tnslsnr");
+			String oracleHomeDir = shell.parseInfoByRegex("(/.+)/bin/tnslsnr",cmdResult,1);
+			
+			db.setDeploymentDir(oracleHomeDir);
+			
+			//找到实例名
+			shell.executeCommands(new String[] { "echo $ORACLE_SID" });
+			cmdResult = shell.getResponse();
+			
+			logger.info(cmdResult);
+			 
+			String oracleSid = cmdResult.split("[\r\n]+").length>=1?cmdResult.split("[\r\n]+")[1]:"NONE";
+			 
+			db.setDbName(oracleSid);
+			
+			//找到数据库文件文件的目录
+			
+			shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
+			cmdResult = shell.getResponse();
+
+			logger.info(cmdResult);
+			 
+			shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
+			cmdResult = shell.getResponse();
+
+			logger.info(cmdResult);
+			 
+			////数据文件大小 的正则\s+(\d+MB)\s+
+			////数据文件位置的 正则\s+(/.*)\s+
+			Pattern locationRegex = Pattern.compile("\\s+(/.*)\\s+");
+			Pattern sizeRegex = Pattern.compile("\\s+(\\d+MB)\\s+");
+			 
+			logger.info("正则表达式		\\s+(/.*)\\s+"); 
+			logger.info("正则表达式		\\s+(\\d+MB)\\s+");
+			Matcher locationMatcher = locationRegex.matcher(cmdResult);
+			Matcher sizeMatcher = sizeRegex.matcher(cmdResult);
+			
+			List<Host.Database.DataFile> dfList = new ArrayList<Host.Database.DataFile>();
+			db.setDfList(dfList);
+			while(locationMatcher.find()){
+				Host.Database.DataFile dataFile = new Host.Database.DataFile();
+				dataFile.setFileName(locationMatcher.group(1));
+				if(sizeMatcher.find())
+					dataFile.setFileSize(sizeMatcher.group(1));
+				 
+				dfList.add(dataFile);
+			}
+			
+			//找到版本
+			logger.info("---找到版本---");
+			shell.executeCommands(new String[] {"select version from v$instance;"  });
+			cmdResult = shell.getResponse();
+			logger.info(cmdResult);
+			logger.info("正则表达式		((\\d+\\.?)+\\d*)");
+			String version = shell.parseInfoByRegex("((\\d+\\.?)+\\d*)",cmdResult,1);
+			db.setVersion(version);
+			//由于进入了sqlplus模式，在此断开连接，退出重新登录
+			shell.disconnect();
+			
+			// 建立连接
+			try {
+				shell = new Shell(h.getIp(), SSH_PORT, h.getJkUser(), h.getJkUserPassword());
+			} catch (ShellException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		
+		//weblogic中间件信息
+		List<Host.Middleware> mList = new ArrayList<Host.Middleware>();
+		h.setmList(mList);
+		shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+		cmdResult = shell.getResponse();
+
+		logger.info(cmdResult);
+		 
+		String[] lines = cmdResult.split("[\r\n]+");
+		//存在weblogic
+		if(lines.length>4){
+			Host.Middleware mw = new Host.Middleware();
+			mList.add(mw);
+			mw.setType("WebLogic");
+			mw.setIp(h.getIp());
+			//部署路径
+
+			logger.info(cmdResult);
+			logger.info("正则表达式		-Djava.security.policy=(/.+)/server/lib/weblogic.policy");
+			String deploymentDir = shell.parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
+			String userProjectsDirSource = cmdResult;
+			mw.setDeploymentDir(deploymentDir);
+			//weblogic版本
+			logger.info("正则表达式		([\\d.]+)$");
+			mw.setVersion(shell.parseInfoByRegex("([\\d.]+)$",deploymentDir,1));
+		 
+			//JDK版本
+			
+			shell.executeCommands(new String[] { shell.parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
+			cmdResult = shell.getResponse();
+			
+			logger.info(cmdResult);
+			logger.info("正则表达式		java\\s+version\\s+\"([\\w.]+)\"");
+			 
+			String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
+			mw.setJdkVersion(jdkVersion);
+			
+			mw.setAppList(collectWeblogicAppListForLinux(shell, userProjectsDirSource));
+		}
+	
+    }
+    private static void collectAIX( Shell shell,final SSHClient ssh,Host h,final String allLoadBalancerFarmAndServerInfo){
+
+		Host.HostDetail hostDetail = new Host.HostDetail();
+		h.setDetail(hostDetail);
+		hostDetail.setOs(h.getOs());//主机详细信息页的操作系统类型
+		//获取主机型号
+		shell.executeCommands(new String[] { "uname -M" });
+		String cmdResult = shell.getResponse();
+		
+		logger.info("---主机型号---");
+		logger.info(cmdResult);
+		logger.info("正则表达式		\\s*uname -M\r\n(.*)\r\n");
+		logger.info("主机型号="+shell.parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult,1));
+		hostDetail.setHostType(shell.parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult,1));
+		//获取主机名
+		shell.executeCommands(new String[] { "uname -n" });
+		cmdResult = shell.getResponse();
+		
+		logger.info("正则表达式		\\s*uname -n\r\n(.*)\r\n");
+		logger.info("主机名="+shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
+		hostDetail.setHostName(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
+		//获取系统版本号
+		shell.executeCommands(new String[] { "uname -v" });
+		cmdResult = shell.getResponse();
+		
+		logger.info("---系统版本号---");
+		logger.info(cmdResult);
+		logger.info("正则表达式		\\s*uname -v\r\n(.*)\r\n");
+		 
+		String version = shell.parseInfoByRegex("\\s*uname -v\r\n(.*)\r\n",cmdResult,1);
+		
+		shell.executeCommands(new String[] { "uname -r" });
+		cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult); 
+		logger.info("正则表达式		\\s*uname -r\r\n(.*)\r\n");
+		logger.info("系统版本号="+version+"."+shell.parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult,1));
+		hostDetail.setOsVersion(version+"."+shell.parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult,1));
+		
+		
+		//获取内存大小
+		List<String> cmdsToExecute = new ArrayList<String>();
+		
+		ssh.setLinuxPromptRegex(ssh.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"Full Core"}));
+		
+		cmdsToExecute.add("prtconf");
+		
+		try {
+			cmdResult = ssh.execute(cmdsToExecute);
+		} catch (ShellException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			cmdResult = "";///shell执行失败，结果默认为空串
+		};
+		
+		logger.info("---内存大小---");
+		logger.info(cmdResult);
+		logger.info("正则表达式		[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})");
+		logger.info("内存大小="+shell.parseInfoByRegex("[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})",cmdResult,1));
+		hostDetail.setMemSize(shell.parseInfoByRegex("[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})",cmdResult,1));
+		
+		//获取CPU个数
+		logger.info("---CPU个数---");
+	 
+		logger.info("正则表达式		[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)");
+		logger.info("CPU个数="+shell.parseInfoByRegex("[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)",cmdResult,1));
+		hostDetail.setCPUNumber(shell.parseInfoByRegex("[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)",cmdResult,1));
+		
+		//获取CPU频率
+		logger.info("---CPU频率---");
+		logger.info("正则表达式		[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})");
+		logger.info("CPU频率="+shell.parseInfoByRegex("[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})",cmdResult,1));
+		hostDetail.setCPUClockSpeed(shell.parseInfoByRegex("[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})",cmdResult,1));
+		
+		
+		//获取CPU核数
+		cmdsToExecute = new ArrayList<String>();
+		cmdsToExecute.add("bindprocessor -q" );
+		
+		try {
+			cmdResult =ssh.execute(cmdsToExecute);
+		} catch (ShellException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			cmdResult = "";///shell执行失败，结果默认为空串
+		}
+		
+		logger.info("---CPU核数---");
+		logger.info("正则表达式		0\\s+(\\d+\\s*)+");
+		logger.info("CPU核数="+shell.parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult,1));
+		hostDetail.setLogicalCPUNumber(Integer.parseInt(shell.parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult,1).trim())+1+"");
+		
+		//是否有配置双机
+		boolean isCluster = false;//默认没有配置双机
+		shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/clshowsrv -v" });
+		cmdResult = shell.getResponse();
+		
+		logger.info("---是否有配置双机---");
+		logger.info(cmdResult);
+		logger.info("正则表达式		0\\s+(\\d+\\s*)+");
+		if(cmdResult.split("[\r\n]+").length>3?true:false){
+			//配置有AIX自带的双机
+			isCluster = true;
+			hostDetail.setIsCluster("是");
+			//获取双机虚地址
+			shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/cllscf" });
+			cmdResult = shell.getResponse();
+			
+			logger.info("---双机虚地址---");
+			logger.info(cmdResult);
+			logger.info("正则表达式		Service\\s+IP\\s+Label\\s+[\\d\\w]+:\\s+IP\\s+address:\\s+((\\d{1,3}\\.){3}\\d{1,3})");
+			hostDetail.setClusterServiceIP(shell.parseInfoByRegex("Service\\s+IP\\s+Label\\s+[\\d\\w]+:\\s+IP\\s+address:\\s+((\\d{1,3}\\.){3}\\d{1,3})", cmdResult,1));
+		}
+		if(!isCluster){
+			shell.executeCommands(new String[] { "hastatus -sum" });
+			cmdResult = shell.getResponse();
+			
+			logger.info("---第三方双机---");
+			logger.info(cmdResult);
+			 
+			//配置第三方双机,第三方双机采集不到虚地址
+			if(cmdResult.split("[\r\n]+").length>3?true:false){
+				isCluster = true;
+				hostDetail.setIsCluster("是");
+				hostDetail.setClusterServiceIP("非自带双机");
+			}
+		}
+		if(!isCluster){
+			//没有配置双机，也没有双机虚地址
+			hostDetail.setIsCluster("否");
+			hostDetail.setClusterServiceIP("NONE");
+		}
+		
+		//应用的负载均衡
+		///正则匹配出Farm及对应的port
+	 	Pattern farmAndPortRegex = Pattern.compile("appdirector farm server table create (.*?) "+h.getIp()+" (\\d{1,5})");
+		Matcher farmAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
+		List<PortLoadConfig> portListFromLoad = new ArrayList();
+		while(farmAndPortMatcher.find()){
+			PortLoadConfig port = new PortLoadConfig();
+			portListFromLoad.add(port);
+			port.setFarm(farmAndPortMatcher.group(1));
+			port.setPort(farmAndPortMatcher.group(2));
+			///匹配端口对应的服务地址（虚地址）和服务端口
+			Pattern serviceIpAndPortRegex = Pattern.compile("appdirector l4-policy table create (.*?) (TCP|UDP) (\\d{1,5}) (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn "+port.getFarm());
+			Matcher serviceIpAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
+			if(serviceIpAndPortMatcher.find()){
+				port.setServiceIp(serviceIpAndPortMatcher.group(1));
+				port.setServicePort(serviceIpAndPortMatcher.group(3));
+			}
+			
+			
+		}
+		logger.info(portListFromLoad);
+		
+		//获取网卡信息
+		shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
+		cmdResult = shell.getResponse();
+		
+		logger.info("---网卡信息---");
+		logger.info(cmdResult);
+		logger.info("正则表达式		^(ent\\d+)"); 
+		String[] ents = cmdResult.split("[\r\n]+");
+		List<Host.HostDetail.NetworkCard> cardList = new ArrayList<Host.HostDetail.NetworkCard>();
+		///数组中第一个元素是输入的命令  最后一个元素是命令执行之后的提示符，过滤掉不予解析
+		for(int i = 1,size = ents.length;i<size-1;i++){
+			//提取网卡的名字
+			Host.HostDetail.NetworkCard card = new Host.HostDetail.NetworkCard();
+			card.setCardName(shell.parseInfoByRegex("^(ent\\d+)",ents[i],1));
+			
+			//提取网卡的类型（光口 or 电口）
+			card.setIfType(ents[i].indexOf("-SX")== -1?"电口":"光口");//带有-SX为光口
+			cardList.add(card);
+		}
+		  
+		hostDetail.setCardList(cardList);
+		
+		
+		//获取挂载点信息
+		cmdsToExecute = new ArrayList<String>();
+		cmdsToExecute.add("df -m" );
+		try {
+			cmdResult =ssh.execute(cmdsToExecute);
+		} catch (ShellException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			cmdResult = "";///shell执行失败，结果默认为空串
+		}
+		
+		logger.info("---挂载点信息---");
+		logger.info(cmdResult);
+		 
+		String[] diskFSEntries = cmdResult.split("\n");
+		///滤掉磁盘信息的表格头
+		List<Host.HostDetail.FileSystem> fsList = new ArrayList();
+		for(int i = 2,size = diskFSEntries.length-1;i<size;i++){
+			String[] entry = diskFSEntries[i].split("\\s+");
+			
+			if(entry!=null && entry.length == 7){
+				Host.HostDetail.FileSystem fs = new Host.HostDetail.FileSystem();
+				
+				fs.setMountOn(entry[6]);
+				fs.setBlocks(entry[1]+" MB");
+				fs.setUsed(entry[3]);
+				
+				fsList.add(fs);
+				 
+			}
+			
+		}
+		hostDetail.setFsList(fsList);
+		
+		//检测是否安装了Oracle数据库
+
+		List<Host.Database> dList = new ArrayList<Host.Database>();
+		h.setdList(dList);
+		shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
+		cmdResult = shell.getResponse();
+		logger.info(cmdResult);
+		 
+		boolean isExistOracle = cmdResult.split("[\r\n]+").length >=4?true:false;
+		 
+		//安装有Oracle
+		if(isExistOracle){
+			Host.Database db = new Host.Database();
+			dList.add(db);
+			db.setType("Oracle");
+			db.setIp(h.getIp());
+			//找到oracle用户的目录
+			shell.executeCommands(new String[] { "cat /etc/passwd|grep oracle" });
+			cmdResult = shell.getResponse();
+			
+			logger.info(cmdResult);
+			logger.info("正则表达式		:/(.+):");
+			String oracleUserDir = shell.parseInfoByRegex(":/(.+):",cmdResult,1);
+			
+			//找到oracle的安装目录
+			shell.executeCommands(new String[] { "cat "+oracleUserDir+"/.profile" });
+			cmdResult = shell.getResponse();
+			
+			logger.info(cmdResult);
+			logger.info("正则表达式		ORACLE_HOME=([^\r\n]+)");
+			String oracleHomeDir = shell.parseInfoByRegex("ORACLE_HOME=([^\r\n]+)",cmdResult,1);
+			 
+			oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", shell.parseInfoByRegex("ORACLE_BASE=([^\r\n]+)",cmdResult,1)):oracleHomeDir;
+			 
+			db.setDeploymentDir(oracleHomeDir);
+			
+			//找到实例名
+			 
+			logger.info("正则表达式		ORACLE_SID=([^\r\n]+)");
+			String oracleSid = shell.parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult,1);
+			 
+			db.setDbName(oracleSid);
+			
+			//数据文件保存路径
+			
+			
+			//数据文件列表
+			shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
+			cmdResult = shell.getResponse();
+			
+			logger.info(cmdResult);
+			 
+			
+			shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
+			cmdResult = shell.getResponse();
+			logger.info(cmdResult);
+			logger.info("正则表达式		ORACLE_SID=([^\r\n]+)");
+			 
+			////数据文件大小 的正则\s+(\d+MB)\s+
+			////数据文件位置的 正则\s+(/.*)\s+
+			Pattern locationRegex = Pattern.compile("\\s+(/.*)\\s+");
+			Pattern sizeRegex = Pattern.compile("\\s+(\\d+MB)\\s+");
+			Matcher locationMatcher = locationRegex.matcher(cmdResult);
+			Matcher sizeMatcher = sizeRegex.matcher(cmdResult);
+			
+			List<Host.Database.DataFile> dfList = new ArrayList<Host.Database.DataFile>();
+			db.setDfList(dfList);
+			while(locationMatcher.find()){
+				Host.Database.DataFile dataFile = new Host.Database.DataFile();
+				dataFile.setFileName(locationMatcher.group(1));
+				if(sizeMatcher.find())
+					dataFile.setFileSize(sizeMatcher.group(1));
+				 
+				dfList.add(dataFile);
+			}
+			 
+			logger.info("正则表达式		\\s+(/.*)\\s+");
+			logger.info("正则表达式		\\s+(\\d+MB)\\s+");
+			
+			//找到版本
+			logger.info("---找到版本---");
+			shell.executeCommands(new String[] {"select version from v$instance;"  });
+			cmdResult = shell.getResponse();
+			logger.info(cmdResult);
+			logger.info("正则表达式		((\\d+\\.?)+\\d*)");
+			version = shell.parseInfoByRegex("((\\d+\\.?)+\\d*)",cmdResult,1);
+			db.setVersion(version);
+			//由于进入了sqlplus模式，在此断开连接，退出重新登录
+			shell.disconnect();
+			
+			// 建立连接
+			try {
+				shell = new Shell(h.getIp(), SSH_PORT, h.getJkUser(), h.getJkUserPassword());
+			} catch (ShellException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+		
+		
+
+		//weblogic中间件信息
+		List<Host.Middleware> mList = new ArrayList<Host.Middleware>();
+		h.setmList(mList);
+		shell.executeCommands(new String[] { "" });
+		shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+		cmdResult = shell.getResponse();
+
+		logger.info(cmdResult); 
+		String[] lines = cmdResult.split("[\r\n]+");
+		//存在weblogic
+		if(lines.length>4){
+			Host.Middleware mw = new Host.Middleware();
+			mList.add(mw);
+			mw.setType("WebLogic");
+			mw.setIp(h.getIp());
+			//部署路径
+			logger.info(cmdResult);
+			logger.info("正则表达式		-Djava.security.policy=(/.+)/server/lib/weblogic.policy");
+			String deploymentDir = shell.parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
+			String userProjectsDirSource = cmdResult;
+			mw.setDeploymentDir(deploymentDir);
+			//weblogic版本
+			 
+			logger.info("正则表达式		([\\d.]+)$");
+			mw.setVersion(shell.parseInfoByRegex("([\\d.]+)$",deploymentDir,1));
+			
+			System.out.println(deploymentDir+"="+version);
+			//JDK版本
+			 
+			logger.info("正则表达式		(/.+/bin/java)");
+			shell.executeCommands(new String[] { shell.parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
+			cmdResult = shell.getResponse();
+			
+			logger.info(cmdResult);
+			logger.info("正则表达式		java\\s+version\\s+\"([\\w.]+)\"");
+			String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
+			mw.setJdkVersion(jdkVersion);
+			//采集 weblogic的应用列表
+			List<App> appList = collectWeblogicAppListForAIX(shell, userProjectsDirSource);
+			
+			///主机端口和服务IP 服务端口对应表 中端口和主机APP表中的端口相对
+			for(int i = 0 , size = appList.size();i<size;i++){
+				App app = appList.get(i);
+				for(PortLoadConfig port:portListFromLoad){
+					if(app.getPort().equals(port.getPort())){
+						app.setServiceIp(port.getServiceIp());
+						app.setServicePort(port.getServicePort());
+						break;
+					}
+				}
+			}
+			mw.setAppList(appList);
+			
+		}
+	
+    }
+    /**
+     * 提升为root权限
+     * @param shell
+     * @param h
+     */
+    private static void grantRoot(final Shell shell,final Host h){
+    	//当需要特别权限的情况下使用root用户
+		String rootUser = h.getRootUser();
+		String rootUserPassword = h.getRootUserPassword();
+    	//切换到root用户 ，提升权限
+		shell.executeCommands(new String[] { "su -" });
+		String cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		///模拟输入root密码
+		shell.setLinuxPromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"Password:"}));
+		shell.executeCommands(new String[] { rootUserPassword });
+		cmdResult = shell.getResponse();
+			
+		logger.info(cmdResult);
+    }
+    /**
+     * 采集操作系统的类型   AIX  Linux
+     * @param shell
+     * @param h
+     */
+    private static void collectOs(final Shell shell,final Host h){
+    	 
+		shell.executeCommands(new String[] { "uname" });
+		String cmdResult = shell.getResponse();
+		//获取操作系统的类型
+		logger.info("---操作系统的类型---");
+		logger.info("操作系统的类型="+cmdResult);
+		logger.info("正则表达式		\\s*uname\r\n(.*)\r\n");
+		h.setOs(shell.parseInfoByRegex("\\s*uname\r\n(.*?)\r\n",cmdResult,1));
+    }
     /**
      * 采集
      * @param list
@@ -347,10 +1013,7 @@ public class SSHClient {
 			String ip = h.getIp();
 			String jkUser = h.getJkUser();
 			String jkUserPassword = h.getJkUserPassword();
-			
-			//当需要特别权限的情况下使用root用户
-			String rootUser = h.getRootUser();
-			String rootUserPassword = h.getRootUserPassword();
+		 	
 			
 			// 初始化服务器连接信息
 			SSHClient ssh = new SSHClient(ip, jkUser, jkUserPassword);
@@ -367,650 +1030,12 @@ public class SSHClient {
 				continue;
 			}
 			logger.error("	连接到 	"+ip);
-			
-			
-			//切换到root用户 ，提升权限
-			shell.executeCommands(new String[] { "su -" });
-			String cmdResult = shell.getResponse();
-			
-			logger.info(cmdResult);
-			///模拟输入root密码
-			shell.setLinuxPromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"Password:"}));
-			shell.executeCommands(new String[] { rootUserPassword });
-			cmdResult = shell.getResponse();
-				
-			logger.info(cmdResult);
-			
-			shell.executeCommands(new String[] { "uname" });
-		    cmdResult = shell.getResponse();
-			//获取操作系统的类型
-			logger.info("---操作系统的类型---");
-			logger.info("操作系统的类型="+cmdResult);
-			logger.info("正则表达式		\\s*uname\r\n(.*)\r\n");
-			h.setOs(shell.parseInfoByRegex("\\s*uname\r\n(.*?)\r\n",cmdResult,1));
+			grantRoot(shell,h);
+			collectOs(shell,h);
 			if("AIX".equalsIgnoreCase(h.getOs())){
-				Host.HostDetail hostDetail = new Host.HostDetail();
-				h.setDetail(hostDetail);
-				hostDetail.setOs(h.getOs());//主机详细信息页的操作系统类型
-				//获取主机型号
-				shell.executeCommands(new String[] { "uname -M" });
-				cmdResult = shell.getResponse();
-				
-				logger.info("---主机型号---");
-				logger.info(cmdResult);
-				logger.info("正则表达式		\\s*uname -M\r\n(.*)\r\n");
-				logger.info("主机型号="+shell.parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult,1));
-				hostDetail.setHostType(shell.parseInfoByRegex("\\s*uname -M\r\n(.*)\r\n",cmdResult,1));
-				//获取主机名
-				shell.executeCommands(new String[] { "uname -n" });
-				cmdResult = shell.getResponse();
-				
-				logger.info("正则表达式		\\s*uname -n\r\n(.*)\r\n");
-				logger.info("主机名="+shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
-				hostDetail.setHostName(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
-				//获取系统版本号
-				shell.executeCommands(new String[] { "uname -v" });
-				cmdResult = shell.getResponse();
-				
-				logger.info("---系统版本号---");
-				logger.info(cmdResult);
-				logger.info("正则表达式		\\s*uname -v\r\n(.*)\r\n");
-				 
-				String version = shell.parseInfoByRegex("\\s*uname -v\r\n(.*)\r\n",cmdResult,1);
-				
-				shell.executeCommands(new String[] { "uname -r" });
-				cmdResult = shell.getResponse();
-				
-				logger.info(cmdResult); 
-				logger.info("正则表达式		\\s*uname -r\r\n(.*)\r\n");
-				logger.info("系统版本号="+version+"."+shell.parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult,1));
-				hostDetail.setOsVersion(version+"."+shell.parseInfoByRegex("\\s*uname -r\r\n(.*)\r\n",cmdResult,1));
-				
-				
-				//获取内存大小
-				List<String> cmdsToExecute = new ArrayList<String>();
-				
-				ssh.setLinuxPromptRegex(ssh.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"Full Core"}));
-				
-				cmdsToExecute.add("prtconf");
-				
-				try {
-					cmdResult = ssh.execute(cmdsToExecute);
-				} catch (ShellException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					cmdResult = "";///shell执行失败，结果默认为空串
-				};
-				
-				logger.info("---内存大小---");
-				logger.info(cmdResult);
-				logger.info("正则表达式		[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})");
-				logger.info("内存大小="+shell.parseInfoByRegex("[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})",cmdResult,1));
-				hostDetail.setMemSize(shell.parseInfoByRegex("[Gg]ood\\s+[Mm]emory\\s+[Ss]ize:\\s+(\\d+\\s+[MmBbKkGg]{0,2})",cmdResult,1));
-				
-				//获取CPU个数
-				logger.info("---CPU个数---");
-			 
-				logger.info("正则表达式		[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)");
-				logger.info("CPU个数="+shell.parseInfoByRegex("[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)",cmdResult,1));
-				hostDetail.setCPUNumber(shell.parseInfoByRegex("[Nn]umber\\s+[Oo]f\\s+[Pp]rocessors:\\s+(\\d+)",cmdResult,1));
-				
-				//获取CPU频率
-				logger.info("---CPU频率---");
-				logger.info("正则表达式		[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})");
-				logger.info("CPU频率="+shell.parseInfoByRegex("[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})",cmdResult,1));
-				hostDetail.setCPUClockSpeed(shell.parseInfoByRegex("[Pp]rocessor\\s+[Cc]lock\\s+[Ss]peed:\\s+(\\d+\\s+[GgHhMmZz]{0,3})",cmdResult,1));
-				
-				
-				//获取CPU核数
-				cmdsToExecute = new ArrayList<String>();
-				cmdsToExecute.add("bindprocessor -q" );
-				
-				try {
-					cmdResult =ssh.execute(cmdsToExecute);
-				} catch (ShellException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					cmdResult = "";///shell执行失败，结果默认为空串
-				}
-				
-				logger.info("---CPU核数---");
-				logger.info("正则表达式		0\\s+(\\d+\\s*)+");
-				logger.info("CPU核数="+shell.parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult,1));
-				hostDetail.setLogicalCPUNumber(Integer.parseInt(shell.parseInfoByRegex("0\\s+(\\d+\\s*)+",cmdResult,1).trim())+1+"");
-				
-				//是否有配置双机
-				boolean isCluster = false;//默认没有配置双机
-				shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/clshowsrv -v" });
-				cmdResult = shell.getResponse();
-				
-				logger.info("---是否有配置双机---");
-				logger.info(cmdResult);
-				logger.info("正则表达式		0\\s+(\\d+\\s*)+");
-				if(cmdResult.split("[\r\n]+").length>3?true:false){
-					//配置有AIX自带的双机
-					isCluster = true;
-					hostDetail.setIsCluster("是");
-					//获取双机虚地址
-					shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/cllscf" });
-					cmdResult = shell.getResponse();
-					
-					logger.info("---双机虚地址---");
-					logger.info(cmdResult);
-					logger.info("正则表达式		Service\\s+IP\\s+Label\\s+[\\d\\w]+:\\s+IP\\s+address:\\s+((\\d{1,3}\\.){3}\\d{1,3})");
-					hostDetail.setClusterServiceIP(shell.parseInfoByRegex("Service\\s+IP\\s+Label\\s+[\\d\\w]+:\\s+IP\\s+address:\\s+((\\d{1,3}\\.){3}\\d{1,3})", cmdResult,1));
-				}
-				if(!isCluster){
-					shell.executeCommands(new String[] { "hastatus -sum" });
-					cmdResult = shell.getResponse();
-					
-					logger.info("---第三方双机---");
-					logger.info(cmdResult);
-					 
-					//配置第三方双机,第三方双机采集不到虚地址
-					if(cmdResult.split("[\r\n]+").length>3?true:false){
-						isCluster = true;
-						hostDetail.setIsCluster("是");
-						hostDetail.setClusterServiceIP("非自带双机");
-					}
-				}
-				if(!isCluster){
-					//没有配置双机，也没有双机虚地址
-					hostDetail.setIsCluster("否");
-					hostDetail.setClusterServiceIP("NONE");
-				}
-				
-				//应用的负载均衡
-				///正则匹配出Farm及对应的port
-			 	Pattern farmAndPortRegex = Pattern.compile("appdirector farm server table create (.*?) "+h.getIp()+" (\\d{1,5})");
-				Matcher farmAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
-				List<PortLoadConfig> portListFromLoad = new ArrayList();
-				while(farmAndPortMatcher.find()){
-					PortLoadConfig port = new PortLoadConfig();
-					portListFromLoad.add(port);
-					port.setFarm(farmAndPortMatcher.group(1));
-					port.setPort(farmAndPortMatcher.group(2));
-					///匹配端口对应的服务地址（虚地址）和服务端口
-					Pattern serviceIpAndPortRegex = Pattern.compile("appdirector l4-policy table create (.*?) (TCP|UDP) (\\d{1,5}) (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn "+port.getFarm());
-					Matcher serviceIpAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
-					if(serviceIpAndPortMatcher.find()){
-						port.setServiceIp(serviceIpAndPortMatcher.group(1));
-						port.setServicePort(serviceIpAndPortMatcher.group(3));
-					}
-					
-					
-				}
-				logger.info(portListFromLoad);
-	    		
-				//获取网卡信息
-				shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
-				cmdResult = shell.getResponse();
-				
-				logger.info("---网卡信息---");
-				logger.info(cmdResult);
-				logger.info("正则表达式		^(ent\\d+)"); 
-				String[] ents = cmdResult.split("[\r\n]+");
-				List<Host.HostDetail.NetworkCard> cardList = new ArrayList<Host.HostDetail.NetworkCard>();
-				///数组中第一个元素是输入的命令  最后一个元素是命令执行之后的提示符，过滤掉不予解析
-				for(int i = 1,size = ents.length;i<size-1;i++){
-					//提取网卡的名字
-					Host.HostDetail.NetworkCard card = new Host.HostDetail.NetworkCard();
-					card.setCardName(shell.parseInfoByRegex("^(ent\\d+)",ents[i],1));
-					
-					//提取网卡的类型（光口 or 电口）
-					card.setIfType(ents[i].indexOf("-SX")== -1?"电口":"光口");//带有-SX为光口
-					cardList.add(card);
-				}
-				  
-				hostDetail.setCardList(cardList);
-				
-				
-				//获取挂载点信息
-				cmdsToExecute = new ArrayList<String>();
-				cmdsToExecute.add("df -m" );
-				try {
-					cmdResult =ssh.execute(cmdsToExecute);
-				} catch (ShellException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-					cmdResult = "";///shell执行失败，结果默认为空串
-				}
-				
-				logger.info("---挂载点信息---");
-				logger.info(cmdResult);
-				 
-				String[] diskFSEntries = cmdResult.split("\n");
-				///滤掉磁盘信息的表格头
-				List<Host.HostDetail.FileSystem> fsList = new ArrayList();
-				for(int i = 2,size = diskFSEntries.length-1;i<size;i++){
-					String[] entry = diskFSEntries[i].split("\\s+");
-					
-					if(entry!=null && entry.length == 7){
-						Host.HostDetail.FileSystem fs = new Host.HostDetail.FileSystem();
-						
-						fs.setMountOn(entry[6]);
-						fs.setBlocks(entry[1]+" MB");
-						fs.setUsed(entry[3]);
-						
-						fsList.add(fs);
-						 
-					}
-					
-				}
-				hostDetail.setFsList(fsList);
-				
-				//检测是否安装了Oracle数据库
-
-				List<Host.Database> dList = new ArrayList<Host.Database>();
-				h.setdList(dList);
-				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
-				cmdResult = shell.getResponse();
-				logger.info(cmdResult);
-				 
-				boolean isExistOracle = cmdResult.split("[\r\n]+").length >=4?true:false;
-				 
-				//安装有Oracle
-				if(isExistOracle){
-					Host.Database db = new Host.Database();
-					dList.add(db);
-					db.setType("Oracle");
-					db.setIp(ip);
-					//找到oracle用户的目录
-					shell.executeCommands(new String[] { "cat /etc/passwd|grep oracle" });
-					cmdResult = shell.getResponse();
-					
-					logger.info(cmdResult);
-					logger.info("正则表达式		:/(.+):");
-					String oracleUserDir = shell.parseInfoByRegex(":/(.+):",cmdResult,1);
-					
-					//找到oracle的安装目录
-					shell.executeCommands(new String[] { "cat "+oracleUserDir+"/.profile" });
-					cmdResult = shell.getResponse();
-					
-					logger.info(cmdResult);
-					logger.info("正则表达式		ORACLE_HOME=([^\r\n]+)");
-					String oracleHomeDir = shell.parseInfoByRegex("ORACLE_HOME=([^\r\n]+)",cmdResult,1);
-					 
-					oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", shell.parseInfoByRegex("ORACLE_BASE=([^\r\n]+)",cmdResult,1)):oracleHomeDir;
-					 
-					db.setDeploymentDir(oracleHomeDir);
-					
-					//找到实例名
-					 
-					logger.info("正则表达式		ORACLE_SID=([^\r\n]+)");
-					String oracleSid = shell.parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult,1);
-					 
-					db.setDbName(oracleSid);
-					
-					//数据文件保存路径
-					
-					
-					//数据文件列表
-					shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
-					cmdResult = shell.getResponse();
-					
-					logger.info(cmdResult);
-					 
-					
-					shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
-					cmdResult = shell.getResponse();
-					logger.info(cmdResult);
-					logger.info("正则表达式		ORACLE_SID=([^\r\n]+)");
-					 
-					////数据文件大小 的正则\s+(\d+MB)\s+
-					////数据文件位置的 正则\s+(/.*)\s+
-					Pattern locationRegex = Pattern.compile("\\s+(/.*)\\s+");
-					Pattern sizeRegex = Pattern.compile("\\s+(\\d+MB)\\s+");
-					Matcher locationMatcher = locationRegex.matcher(cmdResult);
-					Matcher sizeMatcher = sizeRegex.matcher(cmdResult);
-					
-					List<Host.Database.DataFile> dfList = new ArrayList<Host.Database.DataFile>();
-					db.setDfList(dfList);
-					while(locationMatcher.find()){
-						Host.Database.DataFile dataFile = new Host.Database.DataFile();
-						dataFile.setFileName(locationMatcher.group(1));
-						if(sizeMatcher.find())
-							dataFile.setFileSize(sizeMatcher.group(1));
-						 
-						dfList.add(dataFile);
-					}
-					 
-					logger.info("正则表达式		\\s+(/.*)\\s+");
-					logger.info("正则表达式		\\s+(\\d+MB)\\s+");
-					
-					//找到版本
-					logger.info("---找到版本---");
-					shell.executeCommands(new String[] {"select version from v$instance;"  });
-					cmdResult = shell.getResponse();
-					logger.info(cmdResult);
-					logger.info("正则表达式		((\\d+\\.?)+\\d*)");
-					version = shell.parseInfoByRegex("((\\d+\\.?)+\\d*)",cmdResult,1);
-					db.setVersion(version);
-					//由于进入了sqlplus模式，在此断开连接，退出重新登录
-					shell.disconnect();
-					
-					// 建立连接
-					try {
-						shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
-					} catch (ShellException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					
-				}
-				
-				
-
-				//weblogic中间件信息
-				List<Host.Middleware> mList = new ArrayList<Host.Middleware>();
-				h.setmList(mList);
-				shell.executeCommands(new String[] { "" });
-				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
-				cmdResult = shell.getResponse();
-
-				logger.info(cmdResult); 
-				String[] lines = cmdResult.split("[\r\n]+");
-				//存在weblogic
-				if(lines.length>4){
-					Host.Middleware mw = new Host.Middleware();
-					mList.add(mw);
-					mw.setType("WebLogic");
-					mw.setIp(ip);
-					//部署路径
-					logger.info(cmdResult);
-					logger.info("正则表达式		-Djava.security.policy=(/.+)/server/lib/weblogic.policy");
-					String deploymentDir = shell.parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
-					String userProjectsDirSource = cmdResult;
-					mw.setDeploymentDir(deploymentDir);
-					//weblogic版本
-					 
-					logger.info("正则表达式		([\\d.]+)$");
-					mw.setVersion(shell.parseInfoByRegex("([\\d.]+)$",deploymentDir,1));
-					
-					System.out.println(deploymentDir+"="+version);
-					//JDK版本
-					 
-					logger.info("正则表达式		(/.+/bin/java)");
-					shell.executeCommands(new String[] { shell.parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
-					cmdResult = shell.getResponse();
-					
-					logger.info(cmdResult);
-					logger.info("正则表达式		java\\s+version\\s+\"([\\w.]+)\"");
-					String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
-					mw.setJdkVersion(jdkVersion);
-					//采集 weblogic的应用列表
-					List<App> appList = collectWeblogicAppListForAIX(shell, userProjectsDirSource);
-					
-					///主机端口和服务IP 服务端口对应表 中端口和主机APP表中的端口相对
-					for(int i = 0 , size = appList.size();i<size;i++){
-						App app = appList.get(i);
-						for(PortLoadConfig port:portListFromLoad){
-							if(app.getPort().equals(port.getPort())){
-								app.setServiceIp(port.getServiceIp());
-								app.setServicePort(port.getServicePort());
-								break;
-							}
-						}
-					}
-					mw.setAppList(appList);
-					
-				}
+				collectAIX(shell,ssh,h,allLoadBalancerFarmAndServerInfo.toString());
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
-				
-				
-				Host.HostDetail hostDetail = new Host.HostDetail();
-				h.setDetail(hostDetail);
-				hostDetail.setOs(h.getOs());//主机详细信息页的操作系统类型
-				
-				
-				
-				//获取主机型号
-				shell.executeCommands(new String[] { "dmidecode -s system-manufacturer" });//root用户登录
-				cmdResult = shell.getResponse();
-				
-				logger.info(cmdResult);
-				
-				String manufacturer = cmdResult.split("[\r\n]+")[1].trim();
-				
-				shell.executeCommands(new String[] { "dmidecode -s system-product-name" });
-				cmdResult = shell.getResponse();
-				
-				logger.info(cmdResult);
-				 
-				hostDetail.setHostType(manufacturer+" "+cmdResult.split("[\r\n]+")[1].trim());
-				//获取主机名
-				shell.executeCommands(new String[] { "uname -n" });
-				cmdResult = shell.getResponse();
-				
-				logger.info(cmdResult);
-				logger.info("正则表达式		\\s*uname -n\r\n(.*)\r\n");
-				System.out.print(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
-				hostDetail.setHostName(shell.parseInfoByRegex("\\s*uname -n\r\n(.*)\r\n",cmdResult,1));
-				//获取系统版本号
-				shell.executeCommands(new String[] { "lsb_release -a |grep \"Description\"" });
-				cmdResult = shell.getResponse();
-
-				logger.info(cmdResult);
-				logger.info("正则表达式		[Dd]escription:\\s+(.+)");
-				hostDetail.setOsVersion(shell.parseInfoByRegex("[Dd]escription:\\s+(.+)",cmdResult,1));
-				
-				//CPU个数
-				shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
-				cmdResult = shell.getResponse();
-				
-				logger.info(cmdResult);
-				logger.info("正则表达式		\\s+(\\d+)\\s+");
-				hostDetail.setCPUNumber(shell.parseInfoByRegex("\\s+(\\d+)\\s+",cmdResult,1));
-				
-				//CPU核数
-				shell.executeCommands(new String[] { "cat /proc/cpuinfo | grep \"cpu cores\"" });
-				cmdResult = shell.getResponse();
-
-				logger.info(cmdResult);
-				logger.info("正则表达式		cpu\\s+cores\\s+:\\s+(\\d+)\\s*");
-				hostDetail.setLogicalCPUNumber(parseLogicalCPUNumber("cpu\\s+cores\\s+:\\s+(\\d+)\\s*",cmdResult));
-				
-				//CPU主频
-				shell.executeCommands(new String[] { "dmidecode -s processor-frequency" });
-				cmdResult = shell.getResponse();
-
-				logger.info(cmdResult);
-				 
-				hostDetail.setCPUClockSpeed(cmdResult.split("[\r\n]+").length>=1?cmdResult.split("[\r\n]+")[1]:"NONE");
-				
-				//内存大小
-				shell.executeCommands(new String[] { "free -m" });
-				cmdResult = shell.getResponse();
-				
-				logger.info(cmdResult);
-				 
-				hostDetail.setMemSize(cmdResult.split("[\r\n]+").length>=2?cmdResult.split("[\r\n]+")[2].trim().split("\\s+")[1].trim()+" MB":"NONE");
-				
-				//获取网卡信息
-				
-				shell.executeCommands(new String[] { "ifconfig -a | grep \"^eth\"" });
-				cmdResult = shell.getResponse();
-				
-				logger.info(cmdResult);
-				 
-				String[] eths = cmdResult.split("[\r\n]+");
-				List<Host.HostDetail.NetworkCard> cardList = new ArrayList<Host.HostDetail.NetworkCard>();
-				if(eths.length>=3){
-					for(int i = 1,size=eths.length-1;i<size;i++){
-						
-						String eth = shell.parseInfoByRegex("^(eth\\d+)",eths[i],1);
-						shell.executeCommands(new String[]{"ethtool "+eth+"| grep \"Supported ports\""});
-						cmdResult = shell.getResponse();
-						
-						logger.info(cmdResult);
-						logger.info("正则表达式		Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]");
-						 
-						String typeStr = shell.parseInfoByRegex("Supported\\s+ports:\\s*\\[\\s*(\\w*)\\s*\\]",cmdResult,1);
-						String ifType = typeStr.indexOf("TP")!=-1?"电口":(typeStr.indexOf("FIBRE")!=-1?"光口":"未知");
-						Host.HostDetail.NetworkCard card = new Host.HostDetail.NetworkCard();
-						card.setCardName(eth);
-						card.setIfType(ifType);
-						cardList.add(card);
-					}
-					hostDetail.setCardList(cardList);
-				}
-				
-				
-				//获取挂载点信息
-				shell.executeCommands(new String[] { "df -m" });
-				cmdResult = shell.getResponse();
-				
-				logger.info(cmdResult);
-				 
-				String[] diskFSEntries = cmdResult.split("\n");
-							//滤掉磁盘信息的表格头
-				List<Host.HostDetail.FileSystem> fsList = new ArrayList();
-				for(int i = 2,size = diskFSEntries.length-1;i<size;i++){
-					String[] entry = diskFSEntries[i].split("\\s+");
-					
-					if(entry!=null && entry.length == 6){
-						Host.HostDetail.FileSystem fs = new Host.HostDetail.FileSystem();
-						
-						fs.setMountOn(entry[5]);
-						fs.setBlocks(entry[1]+" MB");
-						fs.setUsed(entry[4]);
-						
-						fsList.add(fs);
-						
-					}
-					
-				}
-				hostDetail.setFsList(fsList);
-				
-				
-				//检测是否安装了Oracle数据库
-
-				List<Host.Database> dList = new ArrayList<Host.Database>();
-				h.setdList(dList);
-				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
-				cmdResult = shell.getResponse();
-				logger.info(cmdResult);
-				 
-				boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
-				
-				//安装有Oracle
-				if(isExist){
-					Host.Database db = new Host.Database();
-					dList.add(db);
-					//
-					db.setType("Oracle");
-					db.setIp(ip);
-				
-					//找到oracle的安装目录
-					 
-					logger.info("正则表达式		(/.+)/bin/tnslsnr");
-					String oracleHomeDir = shell.parseInfoByRegex("(/.+)/bin/tnslsnr",cmdResult,1);
-					
-					db.setDeploymentDir(oracleHomeDir);
-					
-					//找到实例名
-					shell.executeCommands(new String[] { "echo $ORACLE_SID" });
-					cmdResult = shell.getResponse();
-					
-					logger.info(cmdResult);
-					 
-					String oracleSid = cmdResult.split("[\r\n]+").length>=1?cmdResult.split("[\r\n]+")[1]:"NONE";
-					 
-					db.setDbName(oracleSid);
-					
-					//找到数据库文件文件的目录
-					
-					shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
-					cmdResult = shell.getResponse();
-
-					logger.info(cmdResult);
-					 
-					shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
-					cmdResult = shell.getResponse();
-
-					logger.info(cmdResult);
-					 
-					////数据文件大小 的正则\s+(\d+MB)\s+
-					////数据文件位置的 正则\s+(/.*)\s+
-					Pattern locationRegex = Pattern.compile("\\s+(/.*)\\s+");
-					Pattern sizeRegex = Pattern.compile("\\s+(\\d+MB)\\s+");
-					 
-					logger.info("正则表达式		\\s+(/.*)\\s+"); 
-					logger.info("正则表达式		\\s+(\\d+MB)\\s+");
-					Matcher locationMatcher = locationRegex.matcher(cmdResult);
-					Matcher sizeMatcher = sizeRegex.matcher(cmdResult);
-					
-					List<Host.Database.DataFile> dfList = new ArrayList<Host.Database.DataFile>();
-					db.setDfList(dfList);
-					while(locationMatcher.find()){
-						Host.Database.DataFile dataFile = new Host.Database.DataFile();
-						dataFile.setFileName(locationMatcher.group(1));
-						if(sizeMatcher.find())
-							dataFile.setFileSize(sizeMatcher.group(1));
-						 
-						dfList.add(dataFile);
-					}
-					
-					//找到版本
-					logger.info("---找到版本---");
-					shell.executeCommands(new String[] {"select version from v$instance;"  });
-					cmdResult = shell.getResponse();
-					logger.info(cmdResult);
-					logger.info("正则表达式		((\\d+\\.?)+\\d*)");
-					String version = shell.parseInfoByRegex("((\\d+\\.?)+\\d*)",cmdResult,1);
-					db.setVersion(version);
-					//由于进入了sqlplus模式，在此断开连接，退出重新登录
-					shell.disconnect();
-					
-					// 建立连接
-					try {
-						shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
-					} catch (ShellException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-				
-				
-				//weblogic中间件信息
-				List<Host.Middleware> mList = new ArrayList<Host.Middleware>();
-				h.setmList(mList);
-				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
-				cmdResult = shell.getResponse();
-
-				logger.info(cmdResult);
-				 
-				String[] lines = cmdResult.split("[\r\n]+");
-				//存在weblogic
-				if(lines.length>4){
-					Host.Middleware mw = new Host.Middleware();
-					mList.add(mw);
-					mw.setType("WebLogic");
-					mw.setIp(ip);
-					//部署路径
-
-					logger.info(cmdResult);
-					logger.info("正则表达式		-Djava.security.policy=(/.+)/server/lib/weblogic.policy");
-					String deploymentDir = shell.parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
-					String userProjectsDirSource = cmdResult;
-					mw.setDeploymentDir(deploymentDir);
-					//weblogic版本
-					logger.info("正则表达式		([\\d.]+)$");
-					mw.setVersion(shell.parseInfoByRegex("([\\d.]+)$",deploymentDir,1));
-				 
-					//JDK版本
-					
-					shell.executeCommands(new String[] { shell.parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
-					cmdResult = shell.getResponse();
-					
-					logger.info(cmdResult);
-					logger.info("正则表达式		java\\s+version\\s+\"([\\w.]+)\"");
-					 
-					String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
-					mw.setJdkVersion(jdkVersion);
-					
-					mw.setAppList(collectWeblogicAppListForLinux(shell, userProjectsDirSource));
-				}
+				collectLinux(shell,ssh,h,allLoadBalancerFarmAndServerInfo.toString());
 			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
 			}
