@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 import org.apache.log4j.Logger;
 import org.apache.oro.text.regex.MalformedPatternException;
 
+
 import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
@@ -43,7 +44,7 @@ public class Shell {
     private Session session;
     private ChannelShell channel;
     private  Expect4j expect = null;
-    private static final long DEFAULT_TIME_OUT = 2*1000;
+    private static final long DEFAULT_TIME_OUT = 5*1000;
     public  StringBuffer buffer= null;
     
     public static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
@@ -310,12 +311,58 @@ public class Shell {
     public final static String[] LINUX_PROMPT_REGEX_TEMPLATE = new String[] { "~]#", "~#", "#",
         ":~#", "/$", ">","SQL>","\\$"};
     private String[] linuxPromptRegex = null;
+    
+    /**
+     * 应用端口对应的farm和虚地址
+     * @author HP
+     *
+     */
+    private static class PortLoadConfig{
+    	private String port;
+    	private String farm;
+    	private String serviceIp;
+    	private String servicePort;
+    	
+    	
+		@Override
+		public String toString() {
+			return "PortLoadConfig [port=" + port + ", farm=" + farm
+					+ ", serviceIp=" + serviceIp + ", servicePort="
+					+ servicePort + "]";
+		}
+		public String getServicePort() {
+			return servicePort;
+		}
+		public void setServicePort(String servicePort) {
+			this.servicePort = servicePort;
+		}
+		public String getPort() {
+			return port;
+		}
+		public void setPort(String port) {
+			this.port = port;
+		}
+		public String getFarm() {
+			return farm;
+		}
+		public void setFarm(String farm) {
+			this.farm = farm;
+		}
+		public String getServiceIp() {
+			return serviceIp;
+		}
+		public void setServiceIp(String serviceIp) {
+			this.serviceIp = serviceIp;
+		}
+    	
+    	
+    }
     public static void main(String[] args) throws UnsupportedEncodingException, InterruptedException{
     
     	
     	List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		
-    	/*//主机负载均衡
+    	//主机负载均衡
 		///加载负载均衡配置
 		List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
 		System.out.println(loadBalancerList);
@@ -345,11 +392,30 @@ public class Shell {
 			
 			allLoadBalancerFarmAndServerInfo.append(cmdResult);
 		}
-		 logger.info(parseInfoByRegex("appdirector farm server table create (.*?) 10.204.7.153", allLoadBalancerFarmAndServerInfo.toString(),1));
+		/* logger.info(parseInfoByRegex("appdirector farm server table create (.*?) 10.204.7.153", allLoadBalancerFarmAndServerInfo.toString(),1));
     	 String s = allLoadBalancerFarmAndServerInfo.toString();
 		 logger.info(parseInfoByRegex("appdirector l4-policy table create (.*?) (TCP|UDP) \\d{1,5} (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn \"QC7.155_8020  \"", allLoadBalancerFarmAndServerInfo.toString(),1));
 	    */	
-    	
+		String s = allLoadBalancerFarmAndServerInfo.toString();
+		//应用的负载均衡
+		///正则匹配出Farm及对应的port
+	 	Pattern farmAndPortRegex = Pattern.compile("appdirector farm server table create (.*?) 10.204.7.184 (\\d{1,5})");
+		Matcher farmAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
+		List<PortLoadConfig> portListFromLoad = new ArrayList();
+		while(farmAndPortMatcher.find()){
+			PortLoadConfig port = new PortLoadConfig();
+			portListFromLoad.add(port);
+			port.setFarm(farmAndPortMatcher.group(1));
+			port.setPort(farmAndPortMatcher.group(2));
+			///匹配端口对应的服务地址（虚地址）和服务端口
+			Pattern serviceIpAndPortRegex = Pattern.compile("appdirector l4-policy table create (.*?) (TCP|UDP) (\\d{1,5}) (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn "+port.getFarm());
+			Matcher serviceIpAndPortMatcher = serviceIpAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
+			if(serviceIpAndPortMatcher.find()){
+				port.setServiceIp(serviceIpAndPortMatcher.group(1));
+				port.setServicePort(serviceIpAndPortMatcher.group(3));
+			}
+		}
+    	logger.info(portListFromLoad);
 		for (Host h : list) {
 			System.out.println(h);
 
