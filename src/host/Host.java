@@ -745,6 +745,29 @@ public class Host {
 		public static class App{
 			private String appName;
 			private String dir;
+			private String port;
+			private String serviceIp;
+			private	String servicePort;
+			
+			
+			public String getServicePort() {
+				return servicePort;
+			}
+			public void setServicePort(String servicePort) {
+				this.servicePort = servicePort;
+			}
+			public String getServiceIp() {
+				return serviceIp;
+			}
+			public void setServiceIp(String serviceIp) {
+				this.serviceIp = serviceIp;
+			}
+			public String getPort() {
+				return port;
+			}
+			public void setPort(String port) {
+				this.port = port;
+			}
 			public String getAppName() {
 				return appName;
 			}
@@ -757,10 +780,29 @@ public class Host {
 			public void setDir(String dir) {
 				this.dir = dir;
 			}
+			
+			 
+			@Override
+			public boolean equals(Object obj) {
+				if (this == obj)
+					return true;
+				if (obj == null)
+					return false;
+				if (getClass() != obj.getClass())
+					return false;
+				App other = (App) obj;
+				if (port == null) {
+					if (other.port != null)
+						return false;
+				} else if (!port.equals(other.port))
+					return false;
+				return true;
+			}
 			@Override
 			public String toString() {
 				return "App [appName=" + appName + ", dir=" + dir + "]";
 			}
+			
 			
 		}
 	}
