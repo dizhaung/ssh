@@ -287,6 +287,10 @@
 		 						<th>序号</th>
 		 						<th>应用名称</th>
 		 						<th>部署路径</th>
+		 						<th>端口</th>
+		 						<th>虚地址</th>
+		 						<th>虚端口</th>
+		 						　
 		 					</tr>
 		 				</thead>
   						<tbody>
@@ -300,6 +304,9 @@
   								<td><%=i++ %></td>
   								<td><%=app.getAppName() %></td>
   								<td><%=app.getDir() %></td> 
+  								<td><%=app.getPort() %></td> 
+  								<td><%=app.getServiceIp() %></td> 
+  								<td><%=app.getServicePort() %></td> 
   							</tr> 
   							<%
   								}
