@@ -2,6 +2,7 @@ package ssh;
 
 import host.FileManager;
 import host.Host;
+import host.Host.Middleware.App;
 import host.LoadBalancer;
 
 import java.io.IOException;
@@ -9,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -237,6 +239,51 @@ public class SSHClient {
 		List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		
 		startCollect(list);
+    }
+    /**
+     * 应用端口对应的farm和虚地址
+     * @author HP
+     *
+     */
+    private static class PortLoadConfig{
+    	private String port;
+    	private String farm;
+    	private String serviceIp;
+    	private String servicePort;
+    	
+    	
+		@Override
+		public String toString() {
+			return "PortLoadConfig [port=" + port + ", farm=" + farm
+					+ ", serviceIp=" + serviceIp + ", servicePort="
+					+ servicePort + "]";
+		}
+		public String getServicePort() {
+			return servicePort;
+		}
+		public void setServicePort(String servicePort) {
+			this.servicePort = servicePort;
+		}
+		public String getPort() {
+			return port;
+		}
+		public void setPort(String port) {
+			this.port = port;
+		}
+		public String getFarm() {
+			return farm;
+		}
+		public void setFarm(String farm) {
+			this.farm = farm;
+		}
+		public String getServiceIp() {
+			return serviceIp;
+		}
+		public void setServiceIp(String serviceIp) {
+			this.serviceIp = serviceIp;
+		}
+    	
+    	
     }
     /**
      * 采集
@@ -472,20 +519,28 @@ public class SSHClient {
 					hostDetail.setIsCluster("否");
 					hostDetail.setClusterServiceIP("NONE");
 				}
-				//是否负载均衡
-				///正则匹配出Farm
-				String  farm = shell.parseInfoByRegex("appdirector farm server table create (.*?) "+h.getIp(), allLoadBalancerFarmAndServerInfo.toString(),1);
 				
-				//负载均衡上的虚地址
-				if(!"NONE".equals(farm)){
-					hostDetail.setLoadBalancedVirtualIP(shell.parseInfoByRegex("appdirector l4-policy table create (.*?) (TCP|UDP) \\d{1,5} (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn "+farm, allLoadBalancerFarmAndServerInfo.toString(),1));
-					hostDetail.setIsLoadBalanced("是");
-		    	    
-				}else{
-					hostDetail.setLoadBalancedVirtualIP("无");
-					hostDetail.setIsLoadBalanced("否");
-		    	    
+				//应用的负载均衡
+				///正则匹配出Farm及对应的port
+			 	Pattern farmAndPortRegex = Pattern.compile("appdirector farm server table create (.*?) "+h.getIp()+" (\\d{1,5})");
+				Matcher farmAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
+				List<PortLoadConfig> portListFromLoad = new ArrayList();
+				while(farmAndPortMatcher.find()){
+					PortLoadConfig port = new PortLoadConfig();
+					portListFromLoad.add(port);
+					port.setFarm(farmAndPortMatcher.group(1));
+					port.setPort(farmAndPortMatcher.group(2));
+					///匹配端口对应的服务地址（虚地址）和服务端口
+					Pattern serviceIpAndPortRegex = Pattern.compile("appdirector l4-policy table create (.*?) (TCP|UDP) (\\d{1,5}) (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn "+port.getFarm());
+					Matcher serviceIpAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
+					if(serviceIpAndPortMatcher.find()){
+						port.setServiceIp(serviceIpAndPortMatcher.group(1));
+						port.setServicePort(serviceIpAndPortMatcher.group(3));
+					}
+					
+					
 				}
+				logger.info(portListFromLoad);
 	    		
 				//获取网卡信息
 				shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
@@ -684,7 +739,21 @@ public class SSHClient {
 					String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
 					mw.setJdkVersion(jdkVersion);
 					//采集 weblogic的应用列表
-					mw.setAppList(collectWeblogicAppListForAIX(shell, userProjectsDirSource));
+					List<App> appList = collectWeblogicAppListForAIX(shell, userProjectsDirSource);
+					
+					///主机端口和服务IP 服务端口对应表 中端口和主机APP表中的端口相对
+					for(int i = 0 , size = appList.size();i<size;i++){
+						App app = appList.get(i);
+						for(PortLoadConfig port:portListFromLoad){
+							if(app.getPort().equals(port.getPort())){
+								app.setServiceIp(port.getServiceIp());
+								app.setServicePort(port.getServicePort());
+								break;
+							}
+						}
+					}
+					mw.setAppList(appList);
+					
 				}
 			}else if("LINUX".equalsIgnoreCase(h.getOs())){
 				
@@ -1048,6 +1117,8 @@ public class SSHClient {
 							///匹配应用的名字<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
 							app.setAppName(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>",cmdResult,1)); 
 							app.setDir(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>",cmdResult,1));
+							app.setPort(shell.parseInfoByRegex("<[Ll]isten-[Pp]ort>(\\d{1,5})</[Ll]isten-[Pp]ort>",cmdResult,1));
+							
 							appList.add(app);
 							logger.info(app);
 						}
@@ -1068,6 +1139,8 @@ public class SSHClient {
 							///匹配应用的名字<[Aa]pplication[\s\S]+?[Nn]ame="([\S]+)"  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
 							app.setAppName(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"",cmdResult,1)); 
 							app.setDir(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"",cmdResult,1));
+							app.setPort(shell.parseInfoByRegex("[Ll]isten[Pp]ort\\s*=\\s*[\"']?(\\d{1,5})[\"']",cmdResult,1));
+							
 							appList.add(app);
 							logger.info(app);
 						}
@@ -1077,13 +1150,19 @@ public class SSHClient {
 			 }
 			
 		 }
-			
+		//过滤掉没有部署应用的域    即appname为NONE的应用
+		for(Iterator<App> it = appList.iterator();it.hasNext();){
+			App app = it.next();
+			if("NONE".equals(app.getAppName())){
+				appList.remove(app);
+			}
+		}
 		 return appList;
 		
     }
     
     /**
-     * 
+     * 采集linux服务器上运行的应用列表
      * @param shell
      * @param userProjectsDirSource
      * @return
