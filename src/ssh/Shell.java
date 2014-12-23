@@ -4,6 +4,7 @@ import host.FileManager;
 import host.Host;
 import host.Host.HostDetail;
 import host.LoadBalancer;
+import host.regex.Regex;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.apache.log4j.Logger;
 import org.apache.oro.text.regex.MalformedPatternException;
@@ -44,8 +46,10 @@ public class Shell {
     private Session session;
     private ChannelShell channel;
     private  Expect4j expect = null;
-    private static final long DEFAULT_TIME_OUT = 5*1000;
+    private  long timeout = 5*1000;
     public  StringBuffer buffer= null;
+    
+    
     
     public static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
     public static final String BACKSLASH_R = "\r";
@@ -54,7 +58,7 @@ public class Shell {
     public static String ENTER_CHARACTER = BACKSLASH_R;
     public static final int SSH_PORT = 22;
     
-   
+    
     public static String[] errorMsg=new String[]{"could not acquire the config lock "};
     
     private String ip;
@@ -77,7 +81,13 @@ public class Shell {
         expect = getExpect();
     }
     
-    public void disconnect(){
+    
+    public void setTimeout(long timeout) {
+		this.timeout = timeout;
+	}
+
+
+	public void disconnect(){
         if(channel!=null){
             channel.disconnect();
         }
@@ -116,7 +126,7 @@ public class Shell {
             channel = (ChannelShell) session.openChannel("shell");
             Expect4j expect = new Expect4j(channel.getInputStream(), channel
                     .getOutputStream());
-            expect.setDefaultTimeout(DEFAULT_TIME_OUT);
+            
             channel.connect();
             logger.debug(String.format("Logging to %s@%s:%s successfully!",user,ip,port));
             return expect;
@@ -198,7 +208,7 @@ public class Shell {
                     }
                 }
                
-                lstPattern.add(new TimeoutMatch(DEFAULT_TIME_OUT, new Closure() {
+                lstPattern.add(new TimeoutMatch(timeout, new Closure() {
 
 					@Override
 					public void run(ExpectState state) throws Exception {
@@ -433,6 +443,7 @@ public class Shell {
 			
 			try {
 				shell = new Shell(ip, SSH_PORT, jkUser, jkUserPassword);
+				shell.setTimeout(2*1000);
 			} catch (ShellException e) {
 				// TODO Auto-generated catch block
 				logger.error("无法采集主机"+ip+"，连接下一个主机");
@@ -461,10 +472,11 @@ public class Shell {
 			//获取操作系统的类型
 			
 			System.out.println(cmdResult);
-			h.setOs(parseInfoByRegex("\\s*uname\r\n(.*)\r\n",cmdResult,1));
-			if("AIX".equalsIgnoreCase(h.getOs())){
+			logger.info("操作系统的类型="+parseInfoByRegex(Regex.CommonRegex.HOST_OS,cmdResult,1));
+			h.setOs(parseInfoByRegex(Regex.CommonRegex.HOST_OS,cmdResult,1));
+			if("AIX".equalsIgnoreCase(h.getOs())){/*
 				
-				/* //获取主机型号
+				 //获取主机型号
 				shell.executeCommands(new String[] { "uname -M" });
 				cmdResult = shell.getResponse();
 				
@@ -535,7 +547,7 @@ public class Shell {
 				
 				System.out.print(parseInfoByRegex("\\s*bindprocessor -q\r\n(.*)\r\n",cmdResult,1));
 				
-				*/
+				
 				//检测是否安装了Oracle数据库
 				shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
 				cmdResult = shell.getResponse();
@@ -561,13 +573,13 @@ public class Shell {
 					String oracleSid = parseInfoByRegex("ORACLE_SID=([^\r\n]+)",cmdResult,1);
 					System.out.println(oracleSid);
 					
-					/*System.out.println("tnslsnr="+cmdResult);
+					System.out.println("tnslsnr="+cmdResult);
 					//找到数据库文件文件的目录
 					List<String> cmdsToExecute  = new ArrayList<String>();
 					cmdsToExecute.add("su - oracle");
 					cmdsToExecute.add("select * from dual;");
 					cmdsToExecute.add("select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;" );
-					cmdResult = ssh.execute(cmdsToExecute);*/
+					cmdResult = ssh.execute(cmdsToExecute);
 					shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
 					cmdResult = shell.getResponse();
 					System.out.println(cmdResult);
@@ -613,7 +625,7 @@ public class Shell {
 				}
 				
 				
-				/*shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
 				cmdResult = shell.getResponse();
 				System.out.println(cmdResult);
 				String[] lines = cmdResult.split("[\r\n]+");
@@ -634,9 +646,9 @@ public class Shell {
 					
 					//应用名称及其部署路径
 					SSHClient.collectWeblogicAppListForAIX(shell, userProjectsDirSource); 
-				}*/
+				}
 				
-			}else if("LINUX".equalsIgnoreCase(h.getOs())){
+			*/}else if("LINUX".equalsIgnoreCase(h.getOs())){/*
 				//CPU个数
 				shell.executeCommands(new String[] { "cat /proc/cpuinfo |grep \"physical id\"|wc -l" });
 				cmdResult = shell.getResponse();
@@ -740,7 +752,7 @@ public class Shell {
 					//应用名称及其部署路径
 					SSHClient.collectWeblogicAppListForLinux(shell, userProjectsDirSource);
 					}
-			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
+			*/}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 				
 			}
 			shell.disconnect();
@@ -767,6 +779,8 @@ public class Shell {
     			return number+"";
     	    	
     }
+    
+    
     /**
      * 使用pattern从cmdResult获取必要的信息，若提取不到返回NONE
      * @param pattern     提取必要信息的模式
@@ -775,7 +789,14 @@ public class Shell {
      */
     public static String parseInfoByRegex(final String pattern,final String cmdResult,final int groupNum){
     	//获取操作系统的类型
-		Matcher m = Pattern.compile(pattern ).matcher(cmdResult);
+		Matcher m = null;
+		try{
+			m = Pattern.compile(pattern).matcher(cmdResult);
+		}catch(PatternSyntaxException e){
+			logger.error(e);
+			e.printStackTrace();
+			return "NONE";//正则表达式不合法的情况下，解析结果就是NONE
+		}
 		if(m.find()){
 			return m.group(groupNum);
 	
@@ -783,6 +804,17 @@ public class Shell {
 			return "NONE";
 		}
     	
+    }
+    /**
+     * 使用enum pattern从cmdResult获取必要的信息，若提取不到返回NONE  委托于pattern为String类型的方法
+     * @param pattern     提取必要信息的模式
+     * @param cmdResult   shell命名执行后返回的结果
+     * @return
+     */
+    public static String parseInfoByRegex(final Regex pattern,final String cmdResult,final int groupNum){
+    	//获取操作系统的类型
+		
+    	return parseInfoByRegex(pattern+"",cmdResult,groupNum);
     }
     /**
      * 使用pattern从cmdResult获取应用根目录
