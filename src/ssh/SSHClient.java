@@ -7,6 +7,7 @@ import host.LoadBalancer;
 import host.command.CollectCommand;
 import host.regex.Regex;
 import host.regex.Regex.CommonRegex;
+import host.regex.RegexEntity;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -580,7 +581,7 @@ public class SSHClient {
 		//获取主机名
 		shell.executeCommands(new String[] { "uname -n" });
 		cmdResult = shell.getResponse();
-		
+		logger.info(cmdResult);
 		logger.info("正则表达式		"+Regex.AixRegex.HOST_NAME);
 		logger.info("主机名="+shell.parseInfoByRegex(Regex.AixRegex.HOST_NAME,cmdResult,1));
 		hostDetail.setHostName(shell.parseInfoByRegex(Regex.AixRegex.HOST_NAME,cmdResult,1));
@@ -671,7 +672,7 @@ public class SSHClient {
 		
 		logger.info("---是否有配置双机---");
 		logger.info(cmdResult);
-		logger.info("正则表达式		0\\s+(\\d+\\s*)+");
+		 
 		if(cmdResult.split(Regex.CommonRegex.LINE_REAR.toString()).length>3?true:false){
 			//配置有AIX自带的双机
 			isCluster = true;
@@ -708,7 +709,7 @@ public class SSHClient {
 		//应用的负载均衡
 		///正则匹配出Farm及对应的port
 		//logger.info();
-	 	Pattern farmAndPortRegex = Pattern.compile("appdirector farm server table create (.*?) "+h.getIp()+" (\\d{1,5})");
+	 	Pattern farmAndPortRegex = Pattern.compile(Regex.CommonRegex.FARM_PORT_PREFIX.plus(RegexEntity.newInstance(h.getIp())).plus(Regex.CommonRegex.FARM_PORT_SUFFIX).toString());
 		Matcher farmAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
 		List<PortLoadConfig> portListFromLoad = new ArrayList();
 		while(farmAndPortMatcher.find()){
@@ -717,7 +718,7 @@ public class SSHClient {
 			port.setFarm(farmAndPortMatcher.group(1));
 			port.setPort(farmAndPortMatcher.group(2));
 			///匹配端口对应的服务地址（虚地址）和服务端口
-			Pattern serviceIpAndPortRegex = Pattern.compile("appdirector l4-policy table create (.*?) (TCP|UDP) (\\d{1,5}) (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn "+port.getFarm());
+			Pattern serviceIpAndPortRegex = Pattern.compile(Regex.CommonRegex.SERVICEIP_PORT.plus(RegexEntity.newInstance(port.getFarm())).toString());
 			Matcher serviceIpAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
 			if(serviceIpAndPortMatcher.find()){
 				port.setServiceIp(serviceIpAndPortMatcher.group(1));
@@ -840,11 +841,16 @@ public class SSHClient {
 			
 			shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
 			cmdResult = shell.getResponse();
-			logger.info(cmdResult);
+			
+			
+			
+			logger.info(cmdResult); 
+			logger.info("正则表达式		"+Regex.AixRegex.ORACLE_DATAFILE_LOCATION);
+			logger.info("正则表达式		"+Regex.AixRegex.ORACLE_DATAFILE_SIZE);
 	 		////数据文件大小 的正则\s+(\d+MB)\s+
 			////数据文件位置的 正则\s+(/.*)\s+
-			Pattern locationRegex = Pattern.compile("\\s+(/.*)\\s+");
-			Pattern sizeRegex = Pattern.compile("\\s+(\\d+MB)\\s+");
+			Pattern locationRegex = Pattern.compile(Regex.AixRegex.ORACLE_DATAFILE_LOCATION.toString());
+			Pattern sizeRegex = Pattern.compile(Regex.AixRegex.ORACLE_DATAFILE_SIZE.toString());
 			Matcher locationMatcher = locationRegex.matcher(cmdResult);
 			Matcher sizeMatcher = sizeRegex.matcher(cmdResult);
 			
@@ -853,22 +859,23 @@ public class SSHClient {
 			while(locationMatcher.find()){
 				Host.Database.DataFile dataFile = new Host.Database.DataFile();
 				dataFile.setFileName(locationMatcher.group(1));
-				if(sizeMatcher.find())
+				logger.info("数据文件路径="+locationMatcher.group(1));
+				if(sizeMatcher.find()){
 					dataFile.setFileSize(sizeMatcher.group(1));
-				 
+					logger.info("数据文件大小="+sizeMatcher.group(1));
+				}
+				
 				dfList.add(dataFile);
 			}
-			 
-			logger.info("正则表达式		\\s+(/.*)\\s+");
-			logger.info("正则表达式		\\s+(\\d+MB)\\s+");
+			
 			
 			//找到版本
 			logger.info("---找到版本---");
 			shell.executeCommands(new String[] {"select version from v$instance;"  });
 			cmdResult = shell.getResponse();
 			logger.info(cmdResult);
-			logger.info("正则表达式		((\\d+\\.?)+\\d*)");
-			version = shell.parseInfoByRegex("((\\d+\\.?)+\\d*)",cmdResult,1);
+			logger.info("正则表达式		"+Regex.AixRegex.ORACLE_VERSION);
+			version = shell.parseInfoByRegex(Regex.AixRegex.ORACLE_VERSION,cmdResult,1);
 			db.setVersion(version);
 			//由于进入了sqlplus模式，在此断开连接，退出重新登录
 			shell.disconnect();
@@ -894,7 +901,7 @@ public class SSHClient {
 		cmdResult = shell.getResponse();
 
 		logger.info(cmdResult); 
-		String[] lines = cmdResult.split("[\r\n]+");
+		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 		//存在weblogic
 		if(lines.length>4){
 			Host.Middleware mw = new Host.Middleware();
@@ -903,25 +910,25 @@ public class SSHClient {
 			mw.setIp(h.getIp());
 			//部署路径
 			logger.info(cmdResult);
-			logger.info("正则表达式		-Djava.security.policy=(/.+)/server/lib/weblogic.policy");
-			String deploymentDir = shell.parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
+			logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_DEPLOY_DIR);
+			String deploymentDir = shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_DEPLOY_DIR,cmdResult,1);
 			String userProjectsDirSource = cmdResult;
 			mw.setDeploymentDir(deploymentDir);
 			//weblogic版本
 			 
-			logger.info("正则表达式		([\\d.]+)$");
-			mw.setVersion(shell.parseInfoByRegex("([\\d.]+)$",deploymentDir,1));
+			logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_VERSION);
+			mw.setVersion(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_VERSION,deploymentDir,1));
 			
 			System.out.println(deploymentDir+"="+version);
 			//JDK版本
 			 
-			logger.info("正则表达式		(/.+/bin/java)");
-			shell.executeCommands(new String[] { shell.parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
+			logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_JDK_JAVA_COMMAND);
+			shell.executeCommands(new String[] { shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_JDK_JAVA_COMMAND,cmdResult,1)+" -version" });
 			cmdResult = shell.getResponse();
 			
 			logger.info(cmdResult);
-			logger.info("正则表达式		java\\s+version\\s+\"([\\w.]+)\"");
-			String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
+			logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_JDK_VERSION);
+			String jdkVersion = shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_JDK_VERSION,cmdResult,1);
 			mw.setJdkVersion(jdkVersion);
 			//采集 weblogic的应用列表
 			List<App> appList = collectWeblogicAppListForAIX(shell, userProjectsDirSource);
@@ -1215,13 +1222,13 @@ public class SSHClient {
 			
 		 }
 		//过滤掉没有部署应用的域    即appname为NONE的应用
-		for(Iterator<App> it = appList.iterator();it.hasNext();){
-			App app = it.next();
+		for(int i = 0,size = appList.size();i<size;i++){
+			App app = appList.get(i);
 			if("NONE".equals(app.getAppName())){
 				appList.remove(app);
 			}
 		}
-		 return appList;
+		return appList;
 		
     }
     
