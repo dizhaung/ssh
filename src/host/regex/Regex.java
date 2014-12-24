@@ -27,6 +27,11 @@ public interface Regex {
 		,
 		BLANK_DELIMITER("\\s+")
 		,
+		FARM_PORT_PREFIX("appdirector farm server table create (.*?) ")
+		,
+		FARM_PORT_SUFFIX(" (\\d{1,5})")
+		,
+		SERVICEIP_PORT("appdirector l4-policy table create (.*?) (TCP|UDP) (\\d{1,5}) (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn ")
 		;
 		
 		private final String regex;
@@ -69,9 +74,12 @@ public interface Regex {
 		,
 		NETCARD_NAME("^(ent\\d+)")
 		,
+		
+		
 		ORACLE_USER_DIR(":/(.+):")
 		,
-		ORACLE_HOME_DIR("ORACLE_HOME=([^\r\n]+)"),
+		ORACLE_HOME_DIR("ORACLE_HOME=([^\r\n]+)")
+		,
 		ORACLE_BASE_DIR("ORACLE_BASE=([^\r\n]+)")
 		,
 		ORACLE_SID("ORACLE_SID=([^\r\n]+)")
@@ -82,7 +90,17 @@ public interface Regex {
 		,
 		ORACLE_VERSION("((\\d+\\.?)+\\d*)")
 		,
-		ORACLE_DEPLOY_DIR("-Djava.security.policy=(/.+)/server/lib/weblogic.policy")
+		
+		
+		
+		
+		WEBLOGIC_DEPLOY_DIR("-Djava.security.policy=(/.+)/server/lib/weblogic.policy")
+		,
+		WEBLOGIC_VERSION("([\\d.]+)$")
+		,
+		WEBLOGIC_JDK_JAVA_COMMAND("(/.+/bin/java)")
+		,
+		WEBLOGIC_JDK_VERSION("java\\s+version\\s+\"([\\w.]+)\"")
 		;
 		private final String regex;
 		private AixRegex(String regex){
