@@ -121,7 +121,10 @@ public class Host {
 	public  List<List<String>> revserseServerBaseInfo(){
 		List<List<String>> table = new  LinkedList();
 		List<String> tr = new LinkedList();
-    	 
+		//有些主机无法采集，也可以导出文件
+    	if(detail == null){
+    		return table;
+    	}
     	tr.add("主机类型");
     	tr.add( detail.getHostType() );
     	tr.add( "操作系统" );
