@@ -30,6 +30,18 @@
 		<url-pattern>/export</url-pattern>
 	</servlet-mapping>
 	
+	
+	<!-- 显示单个主机的详细信息 -->
+	<servlet>
+		<description>单个主机的详细信息</description>
+		<servlet-name>hostDetail</servlet-name>
+		<servlet-class>collect.action.ShowHostDetailActionServlet</servlet-class>
+	</servlet>
+	
+	<servlet-mapping>
+		<servlet-name>hostDetail</servlet-name>
+		<url-pattern>/hostdetail</url-pattern>
+	</servlet-mapping>
 	<!-- dwr 服务器端push  -->
   <servlet>  
          <servlet-name>dwr-invoker</servlet-name>  
