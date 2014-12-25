@@ -1,5 +1,9 @@
 package host.regex;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 /**
  * 所有主机类型的正则作为实现Regex接口   并  作为整个接口的常量
  * 确保使用统一的接口，非实现Regex接口的enum或者class不能当做正确的参数传入
@@ -8,6 +12,7 @@ package host.regex;
  */
 public interface Regex {
 
+	
 	/**
 	 * 连缀正则
 	 * @param regex
@@ -54,6 +59,7 @@ public interface Regex {
 			// TODO Auto-generated method stub
 			return RegexEntity.newInstance().plus(this).plus(regex);
 		}
+		
 	}
 	/**
 	 * aix正则
@@ -101,6 +107,22 @@ public interface Regex {
 		WEBLOGIC_JDK_JAVA_COMMAND("(/.+/bin/java)")
 		,
 		WEBLOGIC_JDK_VERSION("java\\s+version\\s+\"([\\w.]+)\"")
+		,
+		WEBLOGIC_ROOT_DIR("-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy")
+		,
+		WEBLOGIC_10_APP_NAME("<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>")
+		,
+		WEBLOGIC_10_APP_DIR("<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>")
+		,
+		WEBLOGIC_10_APP_PORT("<[Ll]isten-[Pp]ort>(\\d{1,5})</[Ll]isten-[Pp]ort>")
+		
+		
+		,
+		WEBLOGIC_8_APP_NAME("<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"")
+		,
+		WEBLOGIC_8_APP_DIR("<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"")
+		,
+		WEBLOGIC_8_APP_PORT("[Ll]isten[Pp]ort\\s*=\\s*[\"']?(\\d{1,5})[\"']")
 		;
 		private final String regex;
 		private AixRegex(String regex){

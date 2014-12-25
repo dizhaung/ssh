@@ -21,7 +21,7 @@
   	<div class="container">
   	
   	<div class="page-header">
-  		<h1>主机性能信息 <small>物理机</small></h1>
+  		<h1>主机信息</h1>
 	</div>
     <p>
   		<button id="poll" class="btn  btn-primary  " type="button">执&nbsp;&nbsp;行</button>
@@ -105,7 +105,7 @@
     					$('<td></td>').text(data[i].ip).appendTo(tr);//IP
     					$('<td></td>').text(data[i].os).appendTo(tr);//系统
     					$('<td></td>').text((data[i].dList.length>0?'数据库服务器':'')+' '+(data[i].mList.length>0?'应用服务器':'')).appendTo(tr);//类型（数据库服务器or应用服务器）
-    					$('<td></td>').html('<a target="_blank" href="host_detail.jsp?ip='+data[i].ip+'">详细信息</a>').appendTo(tr);//详细信息
+    					$('<td></td>').html('<a target="_blank" href="hostdetail?ip='+data[i].ip+'">详细信息</a>').appendTo(tr);//详细信息
         				
         				
     				}

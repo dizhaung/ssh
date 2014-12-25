@@ -1,5 +1,9 @@
 package host.regex;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 public class RegexEntity  implements Regex{
 
 	private StringBuilder buffer = new StringBuilder();
@@ -58,7 +62,18 @@ public class RegexEntity  implements Regex{
 		// TODO Auto-generated method stub
 		Regex r = RegexEntity.newInstance("jjjjjjjjjjjjjj").plus(Regex.LinuxRegex.HOST_TYPE).plus(Regex.CommonRegex.HOST_OS);
 		System.out.println(r);
+		
+		List<String> l = new ArrayList();
+		l.add("1");l.add("2");l.add("NONE");
+		for(Iterator<String> it = l.iterator();it.hasNext();){
+			String s = it.next();
+			 
+			if(l.contains(s)){
+				l.remove(s);
+			}
+	 
+		}
+		System.out.println(l);
 	}
-
-	
+	 
 }
