@@ -46,7 +46,7 @@ public class CollectActionServlet extends HttpServlet {
 		logger.info("---采集---");
 		//采集
 		SSHClient.startCollect(list);
-		req.getSession().getServletContext().setAttribute("host", list);
+		getServletContext().setAttribute("hostlist", list);
 		PrintWriter out = resp.getWriter();
 		JSONArray o = JSONArray.fromObject(list);
 		out.print(o);
