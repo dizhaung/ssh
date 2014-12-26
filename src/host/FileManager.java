@@ -33,23 +33,39 @@ public class FileManager {
 				e1.printStackTrace();
 			}
 	        BufferedReader reader = null;
-	       System.out.println("以行为单位读取文件内容，一次读一整行：");
+	       System.out.println("-----以行为单位读取文件内容，一次读一整行：-----");
 	       StringBuilder sb = new StringBuilder();
 	            try {
-					reader = new BufferedReader(new FileReader(file));
-					String tempString = null;
-		            
-		            // 一次读入一行，直到读入null为文件结束
-		            while ((tempString = reader.readLine()) != null) {
-		            	sb.append(tempString)
-		            	.append("\n");
-		            }
+	            	
+	            	if(file != null && file.isFile() && file.exists()){
+	            		reader = new BufferedReader(new FileReader(file));
+						String tempString = null;
+			            
+			            // 一次读入一行，直到读入null为文件结束
+			            while ((tempString = reader.readLine()) != null) {
+			            	sb.append(tempString)
+			            	.append("\n");
+			            }
+	            	}
+					
 				} catch (FileNotFoundException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+				}finally{
+					
+					if(reader != null){
+						try {
+							reader.close();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					
+					
 				}
 	            
 		return sb.toString();
