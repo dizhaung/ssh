@@ -19,39 +19,66 @@
   </head>
   <body>
   	<div class="container">
-  	
-  	<div class="page-header">
-  		<h1>主机信息</h1>
-	</div>
-    <p>
-  		<button id="poll" class="btn  btn-primary  " type="button">执&nbsp;&nbsp;行</button>
-  		<button id="export" class="btn  btn-primary pull-right" type="button">导&nbsp;&nbsp;出</button>
-		 
-			<div class="progress">
-				<div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;"></div>
-			
-			</div>
-			
-		 
-	</p>
-
-	<table class="table table-bordered">
+  	 
+  	 	<div class="page-header page-header-fix">
+	   		<h1 class="page-header-title">
+	   		<div class="row">
+	   		 	<div class="col-sm-2">
+	   		 		 <img src="image/logo.gif" alt="山西移动"/> 
+	   		 	</div>
+	   		 	<div class="col-sm-1"></div>
+	   			<div class="col-sm-9">
+	   				 轻量化的业务系统运行环境信息采集和处理工具
+	   			 </div>	
+	  			
+	  		</div>		 
+		 	</h1>
+		 </div>
+ 
+		<div class="row">
+			<div class="col-sm-1"><button id="poll" class="btn  btn-default btn-block" type="button">执&nbsp;&nbsp;行</button></div>
+			 <div class="col-sm-8"></div>
+			 <div class="col-sm-2">
+		 		 <input type="checkbox" checked id="autoChkbox" />是否自动导出 
+		 	</div>
+			 <div class="col-sm-1">
+				 <button id="export" class="btn  btn-default  btn-block" type="button">导&nbsp;&nbsp;出</button>
+			 </div>
+			 
+	  	  
+		</div>
+		<div class="row">
+			 
+				<div class="progress">
+					<div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;"></div>
+				</div>
+				
+			 
+		</div>
+    	<div class="row">
+    		<table class="table table-bordered">
               <thead>
-                <tr>
+                <tr class="table-head">
                   <th>序&nbsp;号</th>
-                  <th>业务名称</th>
+                  <th>业务系统</th>
+                  <th>主机名</th>
+                  <th>服务器类型</th>
                   <th>IP地址</th>
-                  <th>系统</th>
-                  <th>类型</th>
-                  <th>详细信息</th>
+                  <th>操作系统</th>
+                  <th>是否负载均衡</th>
+                  <th>是否双机</th>
+                  <th>应用系统个数</th>
+                  <th>数据库个数</th>
                 </tr>
               </thead>
               <tbody>
              
                
               </tbody>
-            </table>
-     
+       		 </table>
+    	</div>
+	
+  	 
     </div><!-- 行结束 -->
     
     
@@ -80,7 +107,7 @@
 		   msg.maxNum == 0?progressBar.css('width','100%'):progressBar.css('width',msg.nowNum/msg.maxNum*100+'%')
 		}  
     	$(document).ready(function(){
-    	
+    		
     		 //表示允许使用推送技术  
 	        dwr.engine.setActiveReverseAjax(true);  
     		$('#poll').click(function(){
@@ -97,32 +124,51 @@
 	      		
     			$.post('/ssh/collect',function(data){
     				data = JSON.parse(data);
-    				for(var i = 0;i<data.length;i++){
-    					var tr = $('<tr></tr>');
-    					tr.appendTo(tBody);
-    					$('<td></td>').text(i+1).appendTo(tr);//序号
-    					$('<td></td>').text(data[i].buss).appendTo(tr);//业务名称
-    					$('<td></td>').text(data[i].ip).appendTo(tr);//IP
-    					$('<td></td>').text(data[i].os).appendTo(tr);//系统
-    					$('<td></td>').text((data[i].dList.length>0?'数据库服务器':'')+' '+(data[i].mList.length>0?'应用服务器':'')).appendTo(tr);//类型（数据库服务器or应用服务器）
-    					$('<td></td>').html('<a target="_blank" href="hostdetail?ip='+data[i].ip+'">详细信息</a>').appendTo(tr);//详细信息
-        				
-        				
+    				if(data.length > 0 ){   //采集之后并且有服务器被采集
+    					//显示采集到的服务器列表
+    					for(var i = 0;i<data.length;i++){
+        					var tr = $('<tr></tr>');
+        					tr.appendTo(tBody);
+        					$('<td></td>').text(i+1).appendTo(tr);//序号
+        					$('<td></td>').text(data[i].buss).appendTo(tr);//业务名称
+        					$('<td></td>').text(data[i].ip).appendTo(tr);//IP
+        					$('<td></td>').text(data[i].os).appendTo(tr);//系统
+        					$('<td></td>').text((data[i].dList.length>0?'数据库服务器':'')+' '+(data[i].mList.length>0?'应用服务器':'')).appendTo(tr);//类型（数据库服务器or应用服务器）
+        					$('<td></td>').html('<a target="_blank" href="hostdetail?ip='+data[i].ip+'">详细信息</a>').appendTo(tr);//详细信息
+            				
+        					
+        				}
+    					if(isAuto){
+    						console.log('auto');
+    						//下载文件
+        					exportAndDownFile();
+    					}
+    					
+    				}else{//没有服务器被采集  不导出文件  后续可添加提示或其他操作
+						
     				}
+    				
     				//采集完毕，恢复按钮
     				that.disabled = false;
     				exportButton.attr('disabled',false)
     			}); 
     		});
     		//导出采集到的主机信息到文件
-    		var exportButton  = $('#export').click(function(){
-    			this.disabled = true;
-    			var that = this;
+    		var exportButton  = $('#export').click(exportAndDownFile);
+    		/*
+    			导出并下载文件到本地
+    		*/
+    		function exportAndDownFile(){
+    			exportButton.attr('disabled',true);//禁用导出按钮
     			$.get('/ssh/export',function(data){
-    				 
+   				 	console.log(data);
     				$('#exportIframe').attr('src',data);
-    				that.disabled = false;
+    				exportButton.attr('disabled',false);//使导出  按钮可用
     			});
+    		}
+    		var isAuto  =  true;
+    		$('#autoChkbox').click(function(){
+    			isAuto = !isAuto;
     		});
     	});
     </script>
