@@ -6,3 +6,19 @@
 	min-width:100%;
 	color:#333;
 }
+
+.page-header-fix {
+	margin-left:-15px;
+	margin-right:-15px;
+	border-bottom-color:#006699;
+	border-bottom-width:5px;
+
+}
+
+.page-header-title {
+	color:#009900;
+	font-weight:bold;
+}
+.table-head{
+	background-color:#00cd32;
+}
