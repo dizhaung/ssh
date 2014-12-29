@@ -665,7 +665,9 @@ public class SSHClient {
 		}
 		hostDetail.setLogicalCPUNumber(logicalCpuNumber);
 		
-		//是否有配置双机
+		/****************
+		 * 是否有配置双机
+		 ****************/
 		boolean isCluster = false;//默认没有配置双机
 		shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/clshowsrv -v" });
 		cmdResult = shell.getResponse();
@@ -706,11 +708,16 @@ public class SSHClient {
 			hostDetail.setClusterServiceIP("NONE");
 		}
 		
-		//应用的负载均衡
+		
+		/****************
+		 * 应用的负载均衡
+		 ****************/
+	 
 		///正则匹配出Farm及对应的port
 		//logger.info();
 	 	Pattern farmAndPortRegex = Pattern.compile(Regex.CommonRegex.FARM_PORT_PREFIX.plus(RegexEntity.newInstance(h.getIp())).plus(Regex.CommonRegex.FARM_PORT_SUFFIX).toString());
 		Matcher farmAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
+		
 		List<PortLoadConfig> portListFromLoad = new ArrayList();
 		while(farmAndPortMatcher.find()){
 			PortLoadConfig port = new PortLoadConfig();
@@ -727,9 +734,17 @@ public class SSHClient {
 			
 			
 		}
+		//主机被负载均衡
+		if(portListFromLoad.size() > 0){
+			hostDetail.setIsLoadBalanced("是");
+		}else{
+			hostDetail.setIsLoadBalanced("否");
+		}
 		logger.info(portListFromLoad);
 		
-		//获取网卡信息
+		/*******************
+		 * 获取网卡信息
+		 *******************/
 		shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
 		cmdResult = shell.getResponse();
 		
@@ -839,7 +854,7 @@ public class SSHClient {
 			logger.info(cmdResult);
 			 
 			
-			shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
+			shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 as file_size from dba_data_files;"  });
 			cmdResult = shell.getResponse();
 			
 			
@@ -893,7 +908,9 @@ public class SSHClient {
 		
 		
 
-		//weblogic中间件信息
+		/*********************
+		 * weblogic中间件信息
+		 *********************/
 		List<Host.Middleware> mList = new ArrayList<Host.Middleware>();
 		h.setmList(mList);
 		shell.executeCommands(new String[] { "" });
@@ -987,46 +1004,106 @@ public class SSHClient {
 		logger.info("操作系统类型="+shell.parseInfoByRegex("\\s*uname\\s+(\\w+?)\\s+",cmdResult,1));
     }
     
+   
+    /***
+     *  采集负载均衡配置
+     * @return
+     */
     private static StringBuilder collectLoadBalancer(){
     	
-    	StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
+    	final StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
 	 	//获取负载均衡配置文件
 		///加载负载均衡配置
-		List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
+    	final List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
 		logger.info(loadBalancerList);
 		
 		///连接每个负载获取负载信息
-		int loadBalanceNowNum = 0,loadBalanceMaxNum = loadBalancerList.size();
-		for(LoadBalancer lb: loadBalancerList){
+		final int loadBalanceNowNum = 0,loadBalanceMaxNum = loadBalancerList.size();
+		if(loadBalancerList.size() > 0){
 			///负载均衡采集进度实时提示
-			HintMsg msg = new HintMsg(loadBalanceNowNum++,loadBalanceMaxNum,"当前IP:"+lb.getIp(),"当前负载均衡配置文件下载进度");
+			HintMsg msg = new HintMsg(loadBalanceNowNum,loadBalanceMaxNum,"","当前负载均衡配置文件下载进度,已完成"+loadBalanceNowNum+"个,共"+loadBalanceMaxNum+"个");
 			DwrPageContext.run(JSONObject.fromObject(msg).toString());
 			logger.info(msg);
-			Shell sshLoadBalancer;
-			try {
-				sshLoadBalancer = new Shell(lb.getIp(), SSH_PORT,lb.getUserName(), lb.getPassword());
-				sshLoadBalancer.setTimeout(10*1000);
-			} catch (ShellException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				logger.error("无法登陆到		"+lb.getIp());
-				continue;
-			}
-			sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
 			
-			List<String> cmdsToExecute = new ArrayList<String>();
-			
-			String cmdResult;
-			sshLoadBalancer.executeCommands(new String[]{"system config immediate"});
-			cmdResult = sshLoadBalancer.getResponse();
-			logger.info(cmdResult);
+			for(int i = 0 ,size = loadBalancerList.size();i < size;i++){
+				final LoadBalancer lb = loadBalancerList.get(i);
+				 
+				Thread thread = new Thread(new Runnable(){
 	
-			sshLoadBalancer.disconnect();
-			
-			allLoadBalancerFarmAndServerInfo.append(cmdResult);
-			
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+						Shell sshLoadBalancer = null;
+						try {
+							logger.info("------"+lb.getIp()+"开始采集------");
+							
+							sshLoadBalancer = new Shell(lb.getIp(), SSH_PORT,lb.getUserName(), lb.getPassword());
+							sshLoadBalancer.setTimeout(10*1000);
+							
+							sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
+							
+							List<String> cmdsToExecute = new ArrayList<String>();
+							
+							String cmdResult;
+							sshLoadBalancer.executeCommands(new String[]{"system config immediate"});
+							cmdResult = sshLoadBalancer.getResponse();
+							logger.info(lb.getIp()+"======="+cmdResult);
+					
+							sshLoadBalancer.disconnect();
+							
+							
+							synchronized(allLoadBalancerFarmAndServerInfo){
+								allLoadBalancerFarmAndServerInfo.append(cmdResult);
+							}
+							
+						} catch (ShellException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+							logger.error("无法登陆到		"+lb.getIp());
+							//continue;
+						}finally{
+							//此负载均衡采集完毕（包括采集配置完成和无法链接到主机的情况）
+							
+							synchronized(loadBalancerList){
+								lb.setAccomplish(true);//
+								
+								boolean isAllAccomplish = false;
+								int loadBalanceNowNum = 0;
+								for(LoadBalancer l:loadBalancerList){
+									if(l.isAccomplish()){
+										loadBalanceNowNum += 1;
+										isAllAccomplish = true;
+									}else{
+										isAllAccomplish = false;
+									}
+								}
+								HintMsg msg = new HintMsg(loadBalanceNowNum,loadBalanceMaxNum,"已采集IP:"+lb.getIp(),"当前负载均衡配置文件下载进度,已完成"+loadBalanceNowNum+"个,共"+loadBalanceMaxNum+"个");
+								DwrPageContext.run(JSONObject.fromObject(msg).toString());
+								logger.info(msg);
+								if(isAllAccomplish){
+									logger.info("--------负载均衡采集完毕---------");
+									loadBalancerList.notify();
+								}
+							}
+						}
+						
+					}
+					
+				});
+				
+				thread.start();
+			 }
+			synchronized(loadBalancerList){
+				try {
+					logger.info("--------等待负载均衡采集---------");
+					loadBalancerList.wait();
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 		}
-		HintMsg msg = new HintMsg(loadBalanceNowNum++,loadBalanceMaxNum,"下载完毕","当前负载均衡配置文件下载进度");
+		HintMsg msg = new HintMsg(loadBalanceMaxNum,loadBalanceMaxNum,"下载完毕","当前负载均衡配置文件下载进度");
 		DwrPageContext.run(JSONObject.fromObject(msg).toString());
 		logger.info(msg);
 		return allLoadBalancerFarmAndServerInfo;
@@ -1035,21 +1112,40 @@ public class SSHClient {
      * 采集
      * @param list
      */
-    public static void startCollect(List<Host> list){
+    public static void startCollect(final List<Host> list){
     	//向用户传递采集进度
     	int maxNum = list.size();
-    	StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
+    	StringBuilder allLoadBalancerFarmAndServerInfo  = null;
     	if(maxNum == 0){
     		HintMsg msg = new HintMsg(0,0,"无","");
     		DwrPageContext.run(JSONObject.fromObject(msg).toString());
     		logger.info(msg);
-    	}else{
+    		return;
+    	} 
     		//采集负载均衡配置
-    		allLoadBalancerFarmAndServerInfo  = collectLoadBalancer();
-    	}
+    	logger.info("------开始采集负载均衡-----");
+    	allLoadBalancerFarmAndServerInfo  = collectLoadBalancer();
+    	 
+    	logger.info("------开始采集主机-----");
+    	collectHosts(list,allLoadBalancerFarmAndServerInfo);
+    	/*Thread hostCollectThread = new Thread(new Runnable(){
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				
+			}
+    		
+    	});*/
+    	
+    }
+    
+    public static void collectHosts(final List<Host> list,final StringBuilder allLoadBalancerFarmAndServerInfo){
+    	int maxNum = list.size();
     	int nowNum = 0;
     	for (Host h : list) {
 			logger.info(h);
+			
 			HintMsg msg = new HintMsg(nowNum++,maxNum,"当前IP:"+h.getIp(),"当前主机采集进度");
 			DwrPageContext.run(JSONObject.fromObject(msg).toString());
 			logger.info(msg);
@@ -1088,7 +1184,6 @@ public class SSHClient {
     	HintMsg msg = new HintMsg(nowNum,maxNum,"采集完毕","当前主机采集进度");
 		DwrPageContext.run(JSONObject.fromObject(msg).toString());
     }
-    
     /**
      * 获取CPU核数
      * @author HP
@@ -1131,9 +1226,9 @@ public class SSHClient {
 		//应用名称及其部署路径
 		///找到weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains
     	logger.info("---weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains---");
-		 logger.info("正则表达式		-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy");
+		 logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_ROOT_DIR);
 		
-		 Set<String> appRootDirSet = shell.parseUserProjectSetByRegex("-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy",userProjectsDirSource);
+		 Set<String> appRootDirSet = shell.parseUserProjectSetByRegex(Regex.AixRegex.WEBLOGIC_ROOT_DIR,userProjectsDirSource);
 		logger.info("　weblogic中的应用domain 文件夹路径 层次＝"+appRootDirSet);
 		
 		Map<String,Set<String>> appDomainMap = new HashMap();//key是 appRootDir应用根目录
@@ -1143,11 +1238,11 @@ public class SSHClient {
 			
 			logger.info(cmdResult);
 			 
-			String[] lines = cmdResult.split("[\r\n]+");
+			String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 			 if(lines.length>2){//domains下面有多个应用domain
 				Set<String> appDomainSet = new HashSet();
 				 for(int i = 1,index = lines.length-1 ;i<index;i++ ){
-					 String[] domains = lines[i].split("\\s+");
+					 String[] domains = lines[i].split(Regex.CommonRegex.BLANK_DELIMITER.toString());
 					 for(String domain:domains){
 						 appDomainSet.add(domain);
 					 }
@@ -1172,19 +1267,19 @@ public class SSHClient {
 						String cmdResult = shell.getResponse();
 						
 						logger.info(cmdResult);
-						String[] lines = cmdResult.split("[\r\n]+");
+						String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 						
 						///weblogic10
 						if(lines.length>4){    ///执行返回的结果大于4行的话，说明存在config.xml配置文件
 							isExistConfig = true;
 							Host.Middleware.App app = new Host.Middleware.App();
 						 
-							logger.info("正则表达式		<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>");
-							logger.info("正则表达式		<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>");
+							logger.info("应用名称   正则表达式		"+Regex.AixRegex.WEBLOGIC_10_APP_NAME);
+							logger.info("应用路径   正则表达式		"+Regex.AixRegex.WEBLOGIC_10_APP_DIR);
 							///匹配应用的名字<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
-							app.setAppName(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>",cmdResult,1)); 
-							app.setDir(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>",cmdResult,1));
-							app.setPort(shell.parseInfoByRegex("<[Ll]isten-[Pp]ort>(\\d{1,5})</[Ll]isten-[Pp]ort>",cmdResult,1));
+							app.setAppName(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_10_APP_NAME,cmdResult,1)); 
+							app.setDir(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_10_APP_DIR,cmdResult,1));
+							app.setPort(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_10_APP_PORT,cmdResult,1));
 							app.setServiceIp("NONE");
 							app.setServicePort("NONE");
 							
@@ -1202,13 +1297,13 @@ public class SSHClient {
 							Host.Middleware.App app = new Host.Middleware.App();
 							
 							logger.info(cmdResult);
-							logger.info("正则表达式		<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"");
-							logger.info("正则表达式		<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"");
+							logger.info("应用名称     正则表达式		"+Regex.AixRegex.WEBLOGIC_8_APP_NAME);
+							logger.info("应用路径     正则表达式		"+Regex.AixRegex.WEBLOGIC_8_APP_DIR);
 							
 							///匹配应用的名字<[Aa]pplication[\s\S]+?[Nn]ame="([\S]+)"  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
-							app.setAppName(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"",cmdResult,1)); 
-							app.setDir(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"",cmdResult,1));
-							app.setPort(shell.parseInfoByRegex("[Ll]isten[Pp]ort\\s*=\\s*[\"']?(\\d{1,5})[\"']",cmdResult,1));
+							app.setAppName(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_8_APP_NAME,cmdResult,1)); 
+							app.setDir(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_8_APP_DIR,cmdResult,1));
+							app.setPort(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_8_APP_PORT,cmdResult,1));
 							app.setServiceIp("NONE");
 							app.setServicePort("NONE");
 							
@@ -1222,10 +1317,10 @@ public class SSHClient {
 			
 		 }
 		//过滤掉没有部署应用的域    即appname为NONE的应用
-		for(int i = 0,size = appList.size();i<size;i++){
-			App app = appList.get(i);
+		for(Iterator<App> it = appList.iterator();it.hasNext();){
+			App app = it.next();
 			if("NONE".equals(app.getAppName())){
-				appList.remove(app);
+				it.remove();
 			}
 		}
 		return appList;

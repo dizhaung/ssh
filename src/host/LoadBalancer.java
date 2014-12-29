@@ -9,6 +9,15 @@ import java.util.List;
  *
  */
 public class LoadBalancer {
+	private boolean isAccomplish = false;
+
+	public boolean isAccomplish() {
+		return isAccomplish;
+	}
+
+	public synchronized void setAccomplish(boolean isAccomplish) {
+		this.isAccomplish = isAccomplish;
+	}
 
 	private String ip;
 	private String userName;
