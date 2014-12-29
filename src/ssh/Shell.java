@@ -55,7 +55,7 @@ public class Shell {
     public static final String BACKSLASH_R = "\r";
     public static final String BACKSLASH_N = "\n";
     public static final String COLON_CHAR = ":";
-    public static String ENTER_CHARACTER = BACKSLASH_R;
+    public static final String ENTER_CHARACTER = BACKSLASH_R;
     public static final int SSH_PORT = 22;
     
     
@@ -815,6 +815,17 @@ public class Shell {
     	//获取操作系统的类型
 		
     	return parseInfoByRegex(pattern+"",cmdResult,groupNum);
+    }
+    
+    /**
+     * 使用pattern从cmdResult获取应用根目录，委托于另一个方法
+     * @param pattern     提取必要信息的正则
+     * @param cmdResult   shell命名执行后返回的结果
+     * @return
+     */
+    public static Set<String> parseUserProjectSetByRegex(final Regex pattern,final String cmdResult){
+    	
+    	return parseUserProjectSetByRegex(pattern.toString(),cmdResult);
     }
     /**
      * 使用pattern从cmdResult获取应用根目录
