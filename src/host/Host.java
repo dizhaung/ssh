@@ -467,7 +467,7 @@ public class Host {
 		   		  tr = new  LinkedList();
 		   		 tr.add("序号");
 		   		 tr.add("文件路径");
-		   		 tr.add("文件大小");
+		   		 tr.add("文件大小(MB)");
 		   		  table.add(tr);
 		   		  
 		   		  ///表体
