@@ -1,8 +1,10 @@
 package host;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
 
 /**
  * 配置文件每行的数据实体
@@ -11,6 +13,7 @@ import java.util.List;
  *
  */
 public class Host {
+	
 	/**
 	 * 业务名称
 	 */
@@ -292,6 +295,9 @@ public class Host {
 		}
 
 		public List<NetworkCard> getCardList() {
+			if(cardList == null){
+				cardList = Collections.emptyList();
+			}
 			return cardList;
 		}
 
@@ -312,16 +318,17 @@ public class Host {
 	    	tr.add("网卡类型");
 	    	///打印表格主体
 	    	int i = 0;
-	    	if(cardList != null){
-		    	for(Host.HostDetail.NetworkCard card:cardList){
-		    		i++;
-		    		tr = new LinkedList();
-		        	tr.add(""+i);  //序号
-		        	tr.add(card.getCardName());
-		        	tr.add(card.getIfType());
-		        	table.add(tr);
-		    	}
+	    	List<NetworkCard> cardList = getCardList();
+
+	    	for(NetworkCard card:cardList){
+	    		i++;
+	    		tr = new LinkedList();
+	        	tr.add(""+i);  //序号
+	        	tr.add(card.getCardName());
+	        	tr.add(card.getIfType());
+	        	table.add(tr);
 	    	}
+    	
 	    	return table;
 		}
 		/**
@@ -338,21 +345,25 @@ public class Host {
 	    	tr.add("大小");
 	    	tr.add("利用率");
 	    	int i = 0;
-	     
-	    	if(fsList != null){ //测试用，采集后没有磁盘    fsList size是0
-		    	for(Host.HostDetail.FileSystem fs:fsList){
-		    		i++;
-		    		tr = new LinkedList();
-		        	tr.add(""+i);  //序号
-		        	tr.add(fs.getMountOn());
-		        	tr.add(fs.getBlocks());
-		        	tr.add(fs.getUsed());
-		        	table.add(tr);
-		    	}
+	      
+	    	List<FileSystem> fsList = getFsList();
+	    	 //测试用，采集后没有磁盘    fsList size是0
+	    	for(Host.HostDetail.FileSystem fs:fsList){
+	    		i++;
+	    		tr = new LinkedList();
+	        	tr.add(""+i);  //序号
+	        	tr.add(fs.getMountOn());
+	        	tr.add(fs.getBlocks());
+	        	tr.add(fs.getUsed());
+	        	table.add(tr);
 	    	}
+    	
 	    	return table;
 		}
 		public List<FileSystem> getFsList() {
+			if(fsList == null){
+				fsList  =  Collections.emptyList();
+			}
 			return fsList;
 		}
 
@@ -437,8 +448,10 @@ public class Host {
 	 */
 	public List<List<List<String>>> reverseDatabaseList(){
 		List<List<List<String>>>  tables = new LinkedList();
-		  if(dList != null){
-	        for(Host.Database db:dList){
+		 
+		
+		List<Database> dList = getdList();
+		     for(Database db:dList){
 	        	//每个数据库的基本信息
 	        	List<List<String>> table = new  LinkedList();
 	        	List< String> tr = new  LinkedList();
@@ -483,7 +496,7 @@ public class Host {
 	        	tables.add(table);
 	        	
 	        }
-		  }
+		  
 		  return tables;
 	}
 	/**
@@ -492,7 +505,9 @@ public class Host {
 	 */
 	public List<List<List<String>>> reverseMiddlewareList(){
 		List<List<List<String>>>  tables = new LinkedList();
-		  if(mList != null){
+		 
+		List<Middleware>	mList = getmList();
+
 	        for(Middleware mw:mList){
 	        	//每个中间件的基本信息
 	        	List<List<String>> table = new  LinkedList();
@@ -537,10 +552,17 @@ public class Host {
 	        	tables.add(table);
 	        	
 	        }
-		  }
+		  
 		  return tables;
 	}
+	/**
+	 * 
+	 * @return	始终不返回null,最坏情况下返回长度为0的不可变List
+	 */
 	public List<Database> getdList() {
+		if(dList == null){
+			dList = Collections.emptyList();
+		}
 		return dList;
 	}
 	public void setdList(List<Database> dList) {
@@ -549,6 +571,9 @@ public class Host {
 	
 
 	public List<Middleware> getmList() {
+		if(mList == null){
+			mList = Collections.emptyList();
+		}
 		return mList;
 	}
 	public void setmList(List<Middleware> mList) {
@@ -640,6 +665,9 @@ public class Host {
 
 
 		public List<DataFile> getDfList() {
+			if(dfList == null){
+				dfList = Collections.emptyList();
+			}
 			return dfList;
 		}
 
@@ -738,6 +766,9 @@ public class Host {
 		}
 
 		public List<App> getAppList() {
+			if(appList == null){
+				appList = Collections.emptyList();
+			}
 			return appList;
 		}
 
