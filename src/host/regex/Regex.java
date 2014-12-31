@@ -37,6 +37,10 @@ public interface Regex {
 		FARM_PORT_SUFFIX(" (\\d{1,5})")
 		,
 		SERVICEIP_PORT("appdirector l4-policy table create (.*?) (TCP|UDP) (\\d{1,5}) (\\d{1,3}\\.){3}\\d{1,3}\\\\\\s+ .*? -fn ")
+		,
+		LINE_COMMENT("^#.*")
+		,
+		ITEM_DELIMITER("\\|")
 		;
 		
 		private final String regex;
@@ -92,7 +96,7 @@ public interface Regex {
 		,
 		ORACLE_DATAFILE_LOCATION("\\s+(/.*)\\s+")
 		,
-		ORACLE_DATAFILE_SIZE("\\s+(\\d+MB)\\s+")
+		ORACLE_DATAFILE_SIZE("\\s+(\\d+)MB\\s+")
 		,
 		ORACLE_VERSION("((\\d+\\.?)+\\d*)")
 		,

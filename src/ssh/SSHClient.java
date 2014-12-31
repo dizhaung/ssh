@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oro.text.regex.MalformedPatternException;
 
+import collect.CollectedResource;
 import collect.dwr.DwrPageContext;
 import collect.model.HintMsg;
 
@@ -48,7 +49,7 @@ public class SSHClient {
 	private ChannelShell channel;
 	   
     private static final int COMMAND_EXECUTION_SUCCESS_OPCODE = -2;
-    private static String ENTER_CHARACTER = "\r";
+    private static final String ENTER_CHARACTER = "\r";
     private static final int SSH_PORT = 22;
     private List<String> lstCmds = new ArrayList<String>();
     public static final String[] LINUX_PROMPT_REGEX_TEMPLATE = new String[] { "~]#", "~#", "#",
@@ -475,7 +476,7 @@ public class SSHClient {
 			////数据文件大小 的正则\s+(\d+MB)\s+
 			////数据文件位置的 正则\s+(/.*)\s+
 			Pattern locationRegex = Pattern.compile("\\s+(/.*)\\s+");
-			Pattern sizeRegex = Pattern.compile("\\s+(\\d+MB)\\s+");
+			Pattern sizeRegex = Pattern.compile("\\s+(\\d+)MB\\s+");
 			 
 			logger.info("正则表达式		\\s+(/.*)\\s+"); 
 			logger.info("正则表达式		\\s+(\\d+MB)\\s+");
@@ -551,7 +552,7 @@ public class SSHClient {
 			String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
 			mw.setJdkVersion(jdkVersion);
 			
-			mw.setAppList(collectWeblogicAppListForLinux(shell, userProjectsDirSource));
+			mw.setAppList(collectWeblogicAppListForLinux(shell, userProjectsDirSource,h));
 		}
 	
     }
@@ -572,36 +573,36 @@ public class SSHClient {
 		shell.executeCommands(new String[] { CollectCommand.AixCommand.HOST_TYPE.toString() });
 		String cmdResult = shell.getResponse();
 		
-		logger.info("---主机型号---");
+		logger.info(h.getIp()+"---主机型号---");
 		logger.info(cmdResult);
 		
-		logger.info("主机型号正则表达式		"+Regex.AixRegex.HOST_TYPE);
-		logger.info("主机型号="+shell.parseInfoByRegex(Regex.AixRegex.HOST_TYPE,cmdResult,1));
+		logger.info(h.getIp()+"主机型号正则表达式		"+Regex.AixRegex.HOST_TYPE);
+		logger.info(h.getIp()+"主机型号="+shell.parseInfoByRegex(Regex.AixRegex.HOST_TYPE,cmdResult,1));
 		hostDetail.setHostType(shell.parseInfoByRegex(Regex.AixRegex.HOST_TYPE,cmdResult,1));
 		//获取主机名
 		shell.executeCommands(new String[] { "uname -n" });
 		cmdResult = shell.getResponse();
-		logger.info(cmdResult);
-		logger.info("正则表达式		"+Regex.AixRegex.HOST_NAME);
-		logger.info("主机名="+shell.parseInfoByRegex(Regex.AixRegex.HOST_NAME,cmdResult,1));
+		logger.info(h.getIp()+cmdResult);
+		logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.HOST_NAME);
+		logger.info(h.getIp()+"主机名="+shell.parseInfoByRegex(Regex.AixRegex.HOST_NAME,cmdResult,1));
 		hostDetail.setHostName(shell.parseInfoByRegex(Regex.AixRegex.HOST_NAME,cmdResult,1));
 		//获取系统版本号
 		shell.executeCommands(new String[] { "uname -v" });
 		cmdResult = shell.getResponse();
 		
-		logger.info("---系统      主版本号---");
-		logger.info(cmdResult);
-		logger.info("正则表达式		"+Regex.AixRegex.OS_MAIN_VERSION);
+		logger.info(h.getIp()+"---系统      主版本号---");
+		logger.info(h.getIp()+cmdResult);
+		logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.OS_MAIN_VERSION);
 		 
 		String version = shell.parseInfoByRegex(Regex.AixRegex.OS_MAIN_VERSION,cmdResult,1);
 		
 		shell.executeCommands(new String[] { "uname -r" });
 		cmdResult = shell.getResponse();
 		
-		logger.info("---系统      次要版本号---");
-		logger.info(cmdResult); 
-		logger.info("正则表达式		"+Regex.AixRegex.OS_SECOND_VERSION);
-		logger.info("系统版本号="+version+"."+shell.parseInfoByRegex(Regex.AixRegex.OS_SECOND_VERSION,cmdResult,1));
+		logger.info(h.getIp()+"---系统      次要版本号---");
+		logger.info(h.getIp()+cmdResult); 
+		logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.OS_SECOND_VERSION);
+		logger.info(h.getIp()+"系统版本号="+version+"."+shell.parseInfoByRegex(Regex.AixRegex.OS_SECOND_VERSION,cmdResult,1));
 		hostDetail.setOsVersion(version+"."+shell.parseInfoByRegex(Regex.AixRegex.OS_SECOND_VERSION,cmdResult,1));
 		
 		
@@ -620,23 +621,23 @@ public class SSHClient {
 			cmdResult = "";///shell执行失败，结果默认为空串
 		};
 		
-		logger.info("---内存大小---");
-		logger.info(cmdResult);
-		logger.info("正则表达式		 "+Regex.AixRegex.MEMORY_SIZE);
-		logger.info("内存大小="+shell.parseInfoByRegex(Regex.AixRegex.MEMORY_SIZE,cmdResult,1));
+		logger.info(h.getIp()+"---内存大小---");
+		logger.info(h.getIp()+cmdResult);
+		logger.info(h.getIp()+"正则表达式		 "+Regex.AixRegex.MEMORY_SIZE);
+		logger.info(h.getIp()+"内存大小="+shell.parseInfoByRegex(Regex.AixRegex.MEMORY_SIZE,cmdResult,1));
 		hostDetail.setMemSize(shell.parseInfoByRegex(Regex.AixRegex.MEMORY_SIZE,cmdResult,1));
 		
 		//获取CPU个数
-		logger.info("---CPU个数---");
+		logger.info(h.getIp()+"---CPU个数---");
 	 
-		logger.info("正则表达式		"+Regex.AixRegex.CPU_NUMBER);
-		logger.info("CPU个数="+shell.parseInfoByRegex(Regex.AixRegex.CPU_NUMBER,cmdResult,1));
+		logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.CPU_NUMBER);
+		logger.info(h.getIp()+"CPU个数="+shell.parseInfoByRegex(Regex.AixRegex.CPU_NUMBER,cmdResult,1));
 		hostDetail.setCPUNumber(shell.parseInfoByRegex(Regex.AixRegex.CPU_NUMBER,cmdResult,1));
 		
 		//获取CPU频率
-		logger.info("---CPU频率---");
-		logger.info("正则表达式		"+Regex.AixRegex.CPU_CLOCK_SPEED);
-		logger.info("CPU频率="+shell.parseInfoByRegex(Regex.AixRegex.CPU_CLOCK_SPEED,cmdResult,1));
+		logger.info(h.getIp()+"---CPU频率---");
+		logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.CPU_CLOCK_SPEED);
+		logger.info(h.getIp()+"CPU频率="+shell.parseInfoByRegex(Regex.AixRegex.CPU_CLOCK_SPEED,cmdResult,1));
 		hostDetail.setCPUClockSpeed(shell.parseInfoByRegex(Regex.AixRegex.CPU_CLOCK_SPEED,cmdResult,1));
 		
 		
@@ -652,9 +653,9 @@ public class SSHClient {
 			cmdResult = "";///shell执行失败，结果默认为空串
 		}
 		
-		logger.info("---CPU核数---");
-		logger.info("正则表达式		"+Regex.AixRegex.LOGICAL_CPU_NUMBER);
-		logger.info("CPU核数="+shell.parseInfoByRegex(Regex.AixRegex.LOGICAL_CPU_NUMBER,cmdResult,1));
+		logger.info(h.getIp()+"---CPU核数---");
+		logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.LOGICAL_CPU_NUMBER);
+		logger.info(h.getIp()+"CPU核数="+shell.parseInfoByRegex(Regex.AixRegex.LOGICAL_CPU_NUMBER,cmdResult,1));
 		String logicalCpuNumber;
 		try{
 			logicalCpuNumber = Integer.parseInt(shell.parseInfoByRegex(Regex.AixRegex.LOGICAL_CPU_NUMBER,cmdResult,1).trim())+1+"";
@@ -672,8 +673,8 @@ public class SSHClient {
 		shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/clshowsrv -v" });
 		cmdResult = shell.getResponse();
 		
-		logger.info("---是否有配置双机---");
-		logger.info(cmdResult);
+		logger.info(h.getIp()+"---是否有配置双机---");
+		logger.info(h.getIp()+cmdResult);
 		 
 		if(cmdResult.split(Regex.CommonRegex.LINE_REAR.toString()).length>3?true:false){
 			//配置有AIX自带的双机
@@ -683,17 +684,17 @@ public class SSHClient {
 			shell.executeCommands(new String[] { "/usr/es/sbin/cluster/utilities/cllscf" });
 			cmdResult = shell.getResponse();
 			
-			logger.info("---双机虚地址---");
-			logger.info(cmdResult);
-			logger.info("正则表达式		"+Regex.AixRegex.CLUSTER_SERVICE_IP);
+			logger.info(h.getIp()+"---双机虚地址---");
+			logger.info(h.getIp()+cmdResult);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.CLUSTER_SERVICE_IP);
 			hostDetail.setClusterServiceIP(shell.parseInfoByRegex(Regex.AixRegex.CLUSTER_SERVICE_IP, cmdResult,1));
 		}
 		if(!isCluster){
 			shell.executeCommands(new String[] { "hastatus -sum" });
 			cmdResult = shell.getResponse();
 			
-			logger.info("---第三方双机---");
-			logger.info(cmdResult);
+			logger.info(h.getIp()+"---第三方双机---");
+			logger.info(h.getIp()+cmdResult);
 			 
 			//配置第三方双机,第三方双机采集不到虚地址
 			if(cmdResult.split(Regex.CommonRegex.LINE_REAR.toString()).length>3?true:false){
@@ -740,7 +741,7 @@ public class SSHClient {
 		}else{
 			hostDetail.setIsLoadBalanced("否");
 		}
-		logger.info(portListFromLoad);
+		logger.info(h.getIp()+portListFromLoad);
 		
 		/*******************
 		 * 获取网卡信息
@@ -748,9 +749,9 @@ public class SSHClient {
 		shell.executeCommands(new String[] { "lsdev -Cc adapter | grep ent" });
 		cmdResult = shell.getResponse();
 		
-		logger.info("---网卡信息---");
-		logger.info(cmdResult);
-		logger.info("正则表达式		"+Regex.AixRegex.NETCARD_NAME); 
+		logger.info(h.getIp()+"---网卡信息---");
+		logger.info(h.getIp()+cmdResult);
+		logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.NETCARD_NAME); 
 		String[] ents = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 		List<Host.HostDetail.NetworkCard> cardList = new ArrayList<Host.HostDetail.NetworkCard>();
 		///数组中第一个元素是输入的命令  最后一个元素是命令执行之后的提示符，过滤掉不予解析
@@ -778,8 +779,8 @@ public class SSHClient {
 			cmdResult = "";///shell执行失败，结果默认为空串
 		}
 		
-		logger.info("---挂载点信息---");
-		logger.info(cmdResult);
+		logger.info(h.getIp()+"---挂载点信息---");
+		logger.info(h.getIp()+cmdResult);
 		 
 		String[] diskFSEntries = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 		///滤掉磁盘信息的表格头
@@ -807,7 +808,7 @@ public class SSHClient {
 		h.setdList(dList);
 		shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
 		cmdResult = shell.getResponse();
-		logger.info(cmdResult);
+		logger.info(h.getIp()+cmdResult);
 		 
 		boolean isExistOracle = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString()).length >=4?true:false;
 		 
@@ -821,16 +822,16 @@ public class SSHClient {
 			shell.executeCommands(new String[] { "cat /etc/passwd|grep oracle" });
 			cmdResult = shell.getResponse();
 			
-			logger.info(cmdResult);
-			logger.info("正则表达式		"+Regex.AixRegex.ORACLE_USER_DIR);
+			logger.info(h.getIp()+cmdResult);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.ORACLE_USER_DIR);
 			String oracleUserDir = shell.parseInfoByRegex(Regex.AixRegex.ORACLE_USER_DIR,cmdResult,1);
 			
 			//找到oracle的安装目录
 			shell.executeCommands(new String[] { "cat "+oracleUserDir+"/.profile" });
 			cmdResult = shell.getResponse();
 			
-			logger.info(cmdResult);
-			logger.info("正则表达式		"+Regex.AixRegex.ORACLE_HOME_DIR);
+			logger.info(h.getIp()+cmdResult);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.ORACLE_HOME_DIR);
 			String oracleHomeDir = shell.parseInfoByRegex(Regex.AixRegex.ORACLE_HOME_DIR,cmdResult,1);
 			 
 			oracleHomeDir = oracleHomeDir.indexOf("ORACLE_BASE")!=-1?oracleHomeDir.replaceAll("\\$ORACLE_BASE", shell.parseInfoByRegex(Regex.AixRegex.ORACLE_BASE_DIR,cmdResult,1)):oracleHomeDir;
@@ -839,7 +840,7 @@ public class SSHClient {
 			
 			//找到实例名
 			 
-			logger.info("正则表达式		"+Regex.AixRegex.ORACLE_SID);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.ORACLE_SID);
 			String oracleSid = shell.parseInfoByRegex(Regex.AixRegex.ORACLE_SID,cmdResult,1);
 			 
 			db.setDbName(oracleSid);
@@ -851,17 +852,17 @@ public class SSHClient {
 			shell.executeCommands(new String[] { "su - oracle","sqlplus / as sysdba"});
 			cmdResult = shell.getResponse();
 			
-			logger.info(cmdResult);
+			logger.info(h.getIp()+cmdResult);
 			 
 			
-			shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 as file_size from dba_data_files;"  });
+			shell.executeCommands(new String[] {"select file_name,bytes/1024/1024 ||'MB' as file_size from dba_data_files;"  });
 			cmdResult = shell.getResponse();
 			
 			
 			
-			logger.info(cmdResult); 
-			logger.info("正则表达式		"+Regex.AixRegex.ORACLE_DATAFILE_LOCATION);
-			logger.info("正则表达式		"+Regex.AixRegex.ORACLE_DATAFILE_SIZE);
+			logger.info(h.getIp()+cmdResult); 
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.ORACLE_DATAFILE_LOCATION);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.ORACLE_DATAFILE_SIZE);
 	 		////数据文件大小 的正则\s+(\d+MB)\s+
 			////数据文件位置的 正则\s+(/.*)\s+
 			Pattern locationRegex = Pattern.compile(Regex.AixRegex.ORACLE_DATAFILE_LOCATION.toString());
@@ -874,10 +875,10 @@ public class SSHClient {
 			while(locationMatcher.find()){
 				Host.Database.DataFile dataFile = new Host.Database.DataFile();
 				dataFile.setFileName(locationMatcher.group(1));
-				logger.info("数据文件路径="+locationMatcher.group(1));
+				logger.info(h.getIp()+"数据文件路径="+locationMatcher.group(1));
 				if(sizeMatcher.find()){
 					dataFile.setFileSize(sizeMatcher.group(1));
-					logger.info("数据文件大小="+sizeMatcher.group(1));
+					logger.info(h.getIp()+"数据文件大小="+sizeMatcher.group(1));
 				}
 				
 				dfList.add(dataFile);
@@ -885,11 +886,11 @@ public class SSHClient {
 			
 			
 			//找到版本
-			logger.info("---找到版本---");
+			logger.info(h.getIp()+"---找到版本---");
 			shell.executeCommands(new String[] {"select version from v$instance;"  });
 			cmdResult = shell.getResponse();
-			logger.info(cmdResult);
-			logger.info("正则表达式		"+Regex.AixRegex.ORACLE_VERSION);
+			logger.info(h.getIp()+cmdResult);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.ORACLE_VERSION);
 			version = shell.parseInfoByRegex(Regex.AixRegex.ORACLE_VERSION,cmdResult,1);
 			db.setVersion(version);
 			//由于进入了sqlplus模式，在此断开连接，退出重新登录
@@ -917,7 +918,7 @@ public class SSHClient {
 		shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
 		cmdResult = shell.getResponse();
 
-		logger.info(cmdResult); 
+		logger.info(h.getIp()+cmdResult); 
 		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 		//存在weblogic
 		if(lines.length>4){
@@ -926,29 +927,29 @@ public class SSHClient {
 			mw.setType("WebLogic");
 			mw.setIp(h.getIp());
 			//部署路径
-			logger.info(cmdResult);
-			logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_DEPLOY_DIR);
+			logger.info(h.getIp()+cmdResult);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.WEBLOGIC_DEPLOY_DIR);
 			String deploymentDir = shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_DEPLOY_DIR,cmdResult,1);
 			String userProjectsDirSource = cmdResult;
 			mw.setDeploymentDir(deploymentDir);
 			//weblogic版本
 			 
-			logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_VERSION);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.WEBLOGIC_VERSION);
 			mw.setVersion(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_VERSION,deploymentDir,1));
 			
 			System.out.println(deploymentDir+"="+version);
 			//JDK版本
 			 
-			logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_JDK_JAVA_COMMAND);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.WEBLOGIC_JDK_JAVA_COMMAND);
 			shell.executeCommands(new String[] { shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_JDK_JAVA_COMMAND,cmdResult,1)+" -version" });
 			cmdResult = shell.getResponse();
 			
-			logger.info(cmdResult);
-			logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_JDK_VERSION);
+			logger.info(h.getIp()+cmdResult);
+			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.WEBLOGIC_JDK_VERSION);
 			String jdkVersion = shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_JDK_VERSION,cmdResult,1);
 			mw.setJdkVersion(jdkVersion);
 			//采集 weblogic的应用列表
-			List<App> appList = collectWeblogicAppListForAIX(shell, userProjectsDirSource);
+			List<App> appList = collectWeblogicAppListForAIX(shell, userProjectsDirSource,h);
 			
 			///主机端口和服务IP 服务端口对应表 中端口和主机APP表中的端口相对
 			for(int i = 0 , size = appList.size();i<size;i++){
@@ -972,6 +973,7 @@ public class SSHClient {
      * @param h
      */
     private static void grantRoot(final Shell shell,final Host h){
+    	logger.info(h.getIp()+"提高用户权限");
     	//当需要特别权限的情况下使用root用户
 		String rootUser = h.getRootUser();
 		String rootUserPassword = h.getRootUserPassword();
@@ -979,13 +981,13 @@ public class SSHClient {
 		shell.executeCommands(new String[] { "su -" });
 		String cmdResult = shell.getResponse();
 		
-		logger.info(cmdResult);
+		logger.info(h.getIp()+cmdResult);
 		///模拟输入root密码
 		shell.setLinuxPromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"Password:"}));
 		shell.executeCommands(new String[] { rootUserPassword });
 		cmdResult = shell.getResponse();
 			
-		logger.info(cmdResult);
+		logger.info(h.getIp()+cmdResult);
     }
     /**
      * 采集操作系统的类型   AIX  Linux
@@ -997,11 +999,11 @@ public class SSHClient {
 		shell.executeCommands(new String[] { CollectCommand.CommonCommand.HOST_OS.toString() });
 		String cmdResult = shell.getResponse();
 		//获取操作系统的类型
-		logger.info("---操作系统的类型---");
-		logger.info("执行命令的结果="+cmdResult);
-		logger.info("正则表达式		\\s*uname\r\n(.*)\r\n");
+		logger.info(h.getIp()+"---操作系统的类型---");
+		logger.info(h.getIp()+"执行命令的结果="+cmdResult);
+		logger.info(h.getIp()+"正则表达式		\\s*uname\r\n(.*)\r\n");
 		h.setOs(shell.parseInfoByRegex("\\s*uname\\s+(\\w+?)\\s+",cmdResult,1));
-		logger.info("操作系统类型="+shell.parseInfoByRegex("\\s*uname\\s+(\\w+?)\\s+",cmdResult,1));
+		logger.info(h.getIp()+"操作系统类型="+shell.parseInfoByRegex("\\s*uname\\s+(\\w+?)\\s+",cmdResult,1));
     }
     
    
@@ -1015,15 +1017,11 @@ public class SSHClient {
 	 	//获取负载均衡配置文件
 		///加载负载均衡配置
     	final List<LoadBalancer> loadBalancerList = LoadBalancer.getLoadBalancerList(FileManager.readFile("/loadBalancerConfig.txt"));
-		logger.info(loadBalancerList);
 		
 		///连接每个负载获取负载信息
-		final int loadBalanceNowNum = 0,loadBalanceMaxNum = loadBalancerList.size();
+	    final int loadBalanceNowNum = 0,loadBalanceMaxNum = loadBalancerList.size();
+		final CollectedResource resource = new CollectedResource(0); 
 		if(loadBalancerList.size() > 0){
-			///负载均衡采集进度实时提示
-			HintMsg msg = new HintMsg(loadBalanceNowNum,loadBalanceMaxNum,"","当前负载均衡配置文件下载进度,已完成"+loadBalanceNowNum+"个,共"+loadBalanceMaxNum+"个");
-			DwrPageContext.run(JSONObject.fromObject(msg).toString());
-			logger.info(msg);
 			
 			for(int i = 0 ,size = loadBalancerList.size();i < size;i++){
 				final LoadBalancer lb = loadBalancerList.get(i);
@@ -1064,46 +1062,39 @@ public class SSHClient {
 						}finally{
 							//此负载均衡采集完毕（包括采集配置完成和无法链接到主机的情况）
 							
-							synchronized(loadBalancerList){
-								lb.setAccomplish(true);//
-								
-								boolean isAllAccomplish = false;
-								int loadBalanceNowNum = 0;
-								for(LoadBalancer l:loadBalancerList){
-									if(l.isAccomplish()){
-										loadBalanceNowNum += 1;
-										isAllAccomplish = true;
-									}else{
-										isAllAccomplish = false;
-									}
-								}
-								HintMsg msg = new HintMsg(loadBalanceNowNum,loadBalanceMaxNum,"已采集IP:"+lb.getIp(),"当前负载均衡配置文件下载进度,已完成"+loadBalanceNowNum+"个,共"+loadBalanceMaxNum+"个");
-								DwrPageContext.run(JSONObject.fromObject(msg).toString());
-								logger.info(msg);
-								if(isAllAccomplish){
-									logger.info("--------负载均衡采集完毕---------");
-									loadBalancerList.notify();
-								}
+							synchronized(resource){
+							 	logger.info(lb.getIp()+"负载均衡采集完毕---------");
+								resource.increase();
 							}
 						}
 						
 					}
 					
-				});
+				},lb.getIp());
 				
 				thread.start();
 			 }
-			synchronized(loadBalancerList){
-				try {
-					logger.info("--------等待负载均衡采集---------");
-					loadBalancerList.wait();
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+			/*********************
+			 * 最好的情况，当判断while时，资源全部采集完毕，即不进入while体，直接提示采集完毕
+			 * 最坏情况，while循环
+			 ********************/
+			synchronized(resource){
+				logger.info("--------等待负载均衡采集---------");
+				while(resource.getNumber() < loadBalanceMaxNum){
+					HintMsg msg = new HintMsg(resource.getNumber(),loadBalanceMaxNum,"","当前负载均衡配置文件下载进度,已完成"+resource.getNumber()+"个,共"+loadBalanceMaxNum+"个");
+					DwrPageContext.run(JSONObject.fromObject(msg).toString());
+					logger.info(msg);
+					try {
+						resource.wait();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					  
+				} 
 			}
 		}
-		HintMsg msg = new HintMsg(loadBalanceMaxNum,loadBalanceMaxNum,"下载完毕","当前负载均衡配置文件下载进度");
+		HintMsg msg = new HintMsg(resource.getNumber(),loadBalanceMaxNum,"下载完毕","当前负载均衡配置文件下载进度");
 		DwrPageContext.run(JSONObject.fromObject(msg).toString());
 		logger.info(msg);
 		return allLoadBalancerFarmAndServerInfo;
@@ -1115,7 +1106,7 @@ public class SSHClient {
     public static void startCollect(final List<Host> list){
     	//向用户传递采集进度
     	int maxNum = list.size();
-    	StringBuilder allLoadBalancerFarmAndServerInfo  = null;
+    	
     	if(maxNum == 0){
     		HintMsg msg = new HintMsg(0,0,"无","");
     		DwrPageContext.run(JSONObject.fromObject(msg).toString());
@@ -1124,65 +1115,95 @@ public class SSHClient {
     	} 
     		//采集负载均衡配置
     	logger.info("------开始采集负载均衡-----");
-    	allLoadBalancerFarmAndServerInfo  = collectLoadBalancer();
-    	 
+    	StringBuilder allLoadBalancerFarmAndServerInfo  = collectLoadBalancer();
+    	/*StringBuilder allLoadBalancerFarmAndServerInfo  = null;*/
     	logger.info("------开始采集主机-----");
     	collectHosts(list,allLoadBalancerFarmAndServerInfo);
-    	/*Thread hostCollectThread = new Thread(new Runnable(){
-
-			@Override
-			public void run() {
-				// TODO Auto-generated method stub
-				
-			}
-    		
-    	});*/
-    	
     }
     
     public static void collectHosts(final List<Host> list,final StringBuilder allLoadBalancerFarmAndServerInfo){
-    	int maxNum = list.size();
-    	int nowNum = 0;
-    	for (Host h : list) {
-			logger.info(h);
-			
-			HintMsg msg = new HintMsg(nowNum++,maxNum,"当前IP:"+h.getIp(),"当前主机采集进度");
-			DwrPageContext.run(JSONObject.fromObject(msg).toString());
-			logger.info(msg);
-			// 初始化服务器连接信息
-			SSHClient ssh = new SSHClient(h.getIp(), h.getJkUser(), h.getJkUserPassword());
+    	
+    	final int maxNum = list.size(), nowNum = 0;
+    	final CollectedResource resource = new CollectedResource(0); 
+    	if(list.size() > 0){
+    		for (Iterator<Host> it = list.iterator();it.hasNext();) {
+    			final Host h = it.next();
+    			
+    			Thread thread = new Thread(new Runnable(){
 
-			
-			// 建立连接
-			Shell shell;
-			try {
-				shell = new Shell(h.getIp(), SSH_PORT,h.getJkUser(), h.getJkUserPassword());
-				shell.setTimeout(2*1000);
-			} catch (ShellException e) {
-				// TODO Auto-generated catch block
-				logger.error("无法采集主机"+h.getIp()+"，连接下一个主机");
-				e.printStackTrace();
-				continue;
-			}
-			logger.error("	连接到 	"+h.getIp());
-			
-			grantRoot(shell,h);
-			
-			collectOs(shell,h);
-			
-			if("AIX".equalsIgnoreCase(h.getOs())){
-				collectAIX(shell,ssh,h,allLoadBalancerFarmAndServerInfo.toString());
-			}else if("LINUX".equalsIgnoreCase(h.getOs())){
-				collectLinux(shell,ssh,h,allLoadBalancerFarmAndServerInfo.toString());
-			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
-				
-			}
-			logger.info(h);
-			shell.disconnect();
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+						
+						logger.info(h);
+		    			
+		    			/*HintMsg msg = new HintMsg(nowNum++,maxNum,"当前IP:"+h.getIp(),"当前主机采集进度");
+		    			DwrPageContext.run(JSONObject.fromObject(msg).toString());
+		    			logger.info(msg);*/
+		    			// 初始化服务器连接信息
+		    			SSHClient ssh = new SSHClient(h.getIp(), h.getJkUser(), h.getJkUserPassword());
+ 
+		    			// 建立连接
+		    			Shell shell;
+		    			try {
+		    				shell = new Shell(h.getIp(), SSH_PORT,h.getJkUser(), h.getJkUserPassword());
+		    				shell.setTimeout(2*1000);
+		    				
+		    				logger.error("	连接到 	"+h.getIp());
+			    			
+			    			grantRoot(shell,h);
+			    			
+			    			collectOs(shell,h);
+			    			
+			    			if("AIX".equalsIgnoreCase(h.getOs())){
+			    				collectAIX(shell,ssh,h,allLoadBalancerFarmAndServerInfo.toString());
+			    			}else if("LINUX".equalsIgnoreCase(h.getOs())){
+			    				collectLinux(shell,ssh,h,allLoadBalancerFarmAndServerInfo.toString());
+			    			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
+			    				
+			    			}
+			    			logger.info(h);
+			    			shell.disconnect();
+		    			} catch (ShellException e) {
+		    				// TODO Auto-generated catch block
+		    				logger.error("无法采集主机"+h.getIp()+"，连接下一个主机");
+		    				e.printStackTrace();
+		    			}finally{
+		    				synchronized(resource){
+		    					logger.info(h.getIp()+"主机采集完毕---------");
+		    					resource.increase();
+		    				}
+		    			}
+		    			
+					}
+    				
+    			},h.getIp());
+    			
+    			thread.start();
 
-		}
-    	HintMsg msg = new HintMsg(nowNum,maxNum,"采集完毕","当前主机采集进度");
+    		}
+    		 
+    		synchronized(resource){
+    			
+				while(resource.getNumber() < maxNum){
+					HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"","当前主机采集进度,已完成"+resource.getNumber()+"个,共"+maxNum+"个");
+					DwrPageContext.run(JSONObject.fromObject(msg).toString());
+					 
+					logger.info(msg);
+					try {
+						resource.wait();
+					 } catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+    		
+    		}
+    	}
+    	
+    	HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"采集完毕","当前主机采集进度");
 		DwrPageContext.run(JSONObject.fromObject(msg).toString());
+		logger.info(msg);
     }
     /**
      * 获取CPU核数
@@ -1220,23 +1241,23 @@ public class SSHClient {
      * @param userProjectsDirSource   user_projects的上一层目录
      * @return
      */
-    public static List<Host.Middleware.App> collectWeblogicAppListForAIX(final Shell shell,final String userProjectsDirSource){
+    public static List<Host.Middleware.App> collectWeblogicAppListForAIX(final Shell shell,final String userProjectsDirSource,final Host h){
 
 		
 		//应用名称及其部署路径
 		///找到weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains
-    	logger.info("---weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains---");
-		 logger.info("正则表达式		"+Regex.AixRegex.WEBLOGIC_ROOT_DIR);
+    	logger.info(h.getIp()+"---weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains---");
+		 logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.WEBLOGIC_ROOT_DIR);
 		
 		 Set<String> appRootDirSet = shell.parseUserProjectSetByRegex(Regex.AixRegex.WEBLOGIC_ROOT_DIR,userProjectsDirSource);
-		logger.info("　weblogic中的应用domain 文件夹路径 层次＝"+appRootDirSet);
+		logger.info(h.getIp()+"　weblogic中的应用domain 文件夹路径 层次＝"+appRootDirSet);
 		
 		Map<String,Set<String>> appDomainMap = new HashMap();//key是 appRootDir应用根目录
 		for(String appRootDir:appRootDirSet){
 			shell.executeCommands(new String[] {"ls " + appRootDir+"/user_projects/domains" });
 			String cmdResult = shell.getResponse();
 			
-			logger.info(cmdResult);
+			logger.info(h.getIp()+cmdResult);
 			 
 			String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 			 if(lines.length>2){//domains下面有多个应用domain
@@ -1266,7 +1287,7 @@ public class SSHClient {
 					 	shell.executeCommands(new String[] {"cat " + appRootDir+"/user_projects/domains/"+domain+"/config/config.xml" });
 						String cmdResult = shell.getResponse();
 						
-						logger.info(cmdResult);
+						logger.info(h.getIp()+cmdResult);
 						String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 						
 						///weblogic10
@@ -1274,8 +1295,8 @@ public class SSHClient {
 							isExistConfig = true;
 							Host.Middleware.App app = new Host.Middleware.App();
 						 
-							logger.info("应用名称   正则表达式		"+Regex.AixRegex.WEBLOGIC_10_APP_NAME);
-							logger.info("应用路径   正则表达式		"+Regex.AixRegex.WEBLOGIC_10_APP_DIR);
+							logger.info(h.getIp()+"应用名称   正则表达式		"+Regex.AixRegex.WEBLOGIC_10_APP_NAME);
+							logger.info(h.getIp()+"应用路径   正则表达式		"+Regex.AixRegex.WEBLOGIC_10_APP_DIR);
 							///匹配应用的名字<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
 							app.setAppName(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_10_APP_NAME,cmdResult,1)); 
 							app.setDir(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_10_APP_DIR,cmdResult,1));
@@ -1284,7 +1305,7 @@ public class SSHClient {
 							app.setServicePort("NONE");
 							
 							appList.add(app);
-							logger.info(app);
+							logger.info(h.getIp()+app);
 						}
 				 	}
 					if(!isExistConfig){
@@ -1296,9 +1317,9 @@ public class SSHClient {
 							isExistConfig = true;
 							Host.Middleware.App app = new Host.Middleware.App();
 							
-							logger.info(cmdResult);
-							logger.info("应用名称     正则表达式		"+Regex.AixRegex.WEBLOGIC_8_APP_NAME);
-							logger.info("应用路径     正则表达式		"+Regex.AixRegex.WEBLOGIC_8_APP_DIR);
+							logger.info(h.getIp()+cmdResult);
+							logger.info(h.getIp()+"应用名称     正则表达式		"+Regex.AixRegex.WEBLOGIC_8_APP_NAME);
+							logger.info(h.getIp()+"应用路径     正则表达式		"+Regex.AixRegex.WEBLOGIC_8_APP_DIR);
 							
 							///匹配应用的名字<[Aa]pplication[\s\S]+?[Nn]ame="([\S]+)"  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
 							app.setAppName(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_8_APP_NAME,cmdResult,1)); 
@@ -1308,7 +1329,7 @@ public class SSHClient {
 							app.setServicePort("NONE");
 							
 							appList.add(app);
-							logger.info(app);
+							logger.info(h.getIp()+app);
 						}
 					}
 					//System.out.println(cmdResult);
@@ -1333,15 +1354,13 @@ public class SSHClient {
      * @param userProjectsDirSource
      * @return
      */
-    public static List<Host.Middleware.App> collectWeblogicAppListForLinux(final Shell shell,final String userProjectsDirSource){
-
-	
-		//应用名称及其部署路径
+    public static List<Host.Middleware.App> collectWeblogicAppListForLinux(final Shell shell,final String userProjectsDirSource,final Host h){
+    	//应用名称及其部署路径
 		///找到weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains
 		Set<String> appRootDirSet = shell.parseUserProjectSetByRegex("-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy",userProjectsDirSource);
 		
-		logger.info(appRootDirSet);
-		logger.info("正则表达式		-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy");
+		logger.info(h.getIp()+appRootDirSet);
+		logger.info(h.getIp()+"正则表达式		-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy");
 		
 		
 		Map<String,Set<String>> appDomainMap = new HashMap();//key是 appRootDir应用根目录
@@ -1349,7 +1368,7 @@ public class SSHClient {
 			shell.executeCommands(new String[] {"ls --color=never " + appRootDir+"/user_projects/domains" });
 			String cmdResult = shell.getResponse();
 
-			logger.info(cmdResult);
+			logger.info(h.getIp()+cmdResult);
 			 
 			 String[] lines = cmdResult.split("[\r\n]+");
 			 if(lines.length>2){//domains下面有多个应用domain
@@ -1379,7 +1398,7 @@ public class SSHClient {
 						shell.executeCommands(new String[] {"cat " + appRootDir+"/user_projects/domains/"+domain+"/config/config.xml" });
 						String cmdResult = shell.getResponse();
 						
-						logger.info(cmdResult);
+						logger.info(h.getIp()+cmdResult);
 						
 						String[] lines = cmdResult.split("[\r\n]+");
 					
@@ -1389,14 +1408,14 @@ public class SSHClient {
 							Host.Middleware.App app = new Host.Middleware.App();
 							
 							
-							logger.info("正则表达式		<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>");
-							logger.info("正则表达式		<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>");
+							logger.info(h.getIp()+"正则表达式		<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>");
+							logger.info(h.getIp()+"正则表达式		<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>");
 							
 							///匹配应用的名字<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
 							app.setAppName(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>",cmdResult,1)); 
 							app.setDir(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>",cmdResult,1));
 							appList.add(app);
-							logger.info(app);
+							logger.info(h.getIp()+app);
 						}
 					 }
 					if(!isExistConfig){
@@ -1404,26 +1423,24 @@ public class SSHClient {
 						shell.executeCommands(new String[] {"cat " + appRootDir+"/user_projects/domains/"+domain+"/config.xml" });
 						String cmdResult = shell.getResponse();
 						
-						logger.info(cmdResult);
+						logger.info(h.getIp()+cmdResult);
 						
 						String[] lines = cmdResult.split("[\r\n]+");
 						if(lines.length>4){		///执行返回的结果大于4行的话，说明存在config.xml配置文件
 							isExistConfig = true;
 							Host.Middleware.App app = new Host.Middleware.App();
 							
-							logger.info("正则表达式		<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"");
-							logger.info("正则表达式		<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"");
+							logger.info(h.getIp()+"正则表达式		<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"");
+							logger.info(h.getIp()+"正则表达式		<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"");
 							
 							
 							///匹配应用的名字<[Aa]pplication[\s\S]+?[Nn]ame="([\S]+)"  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
 							app.setAppName(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"",cmdResult,1)); 
 							app.setDir(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"",cmdResult,1));
 							appList.add(app);
-							logger.info(app);
+							logger.info(h.getIp()+app);
 						}
-					}
-					//System.out.println(cmdResult);
-					
+					}	
 			 }
 			
 		 }
