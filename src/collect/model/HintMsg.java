@@ -34,7 +34,7 @@ public class HintMsg {
 	@Override
 	public String toString() {
 		return "HintMsg [nowNum=" + nowNum + ", maxNum=" + maxNum + ", ip="
-				+ ip + "]";
+				+ ip + ", msg=" + msg + "]";
 	}
 	public HintMsg(int nowNum, int maxNum, String ip, String msg) {
 		super();

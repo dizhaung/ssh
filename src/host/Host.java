@@ -1,5 +1,7 @@
 package host;
 
+import host.regex.Regex;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -851,11 +853,11 @@ public class Host {
 		
           List<Host> hostList =  new ArrayList<Host>();
           
-            String[] lines = fileContent.split("\n");
+            String[] lines = fileContent.split(Regex.CommonRegex.LINE_REAR.toString());
               for(String tempString:lines){
                 System.out.println(tempString);
-                if(!tempString.matches("^#.*")){  //注释掉的主机过滤掉不链接
-                	String[] strs = tempString.split("\\|");
+                if(!tempString.matches(Regex.CommonRegex.LINE_COMMENT.toString())){  //注释掉的主机过滤掉不链接
+                	String[] strs = tempString.split(Regex.CommonRegex.ITEM_DELIMITER.toString());
                     
                 	Host host = new Host();
                 	host.setBuss(strs[0]);
