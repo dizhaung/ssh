@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>主机信息采集页</title>
+
+    <!-- Bootstrap -->
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- 控制进度条等样式 -->
+	<link href="css/style.css"   rel="stylesheet"/>
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="js/html5css3comp/html5shiv.min.js"></script>
+      <script src="js/html5css3comp/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+  	<div class="container">
+  	 
+  	 	<div class="page-header page-header-fix">
+	   		<h1 class="page-header-title">
+	   		<div class="row">
+	   		 	<div class="col-sm-2">
+	   		 		 <img src="image/logo.gif" alt="山西移动"/> 
+	   		 	</div>
+	   		 	<div class="col-sm-1"></div>
+	   			<div class="col-sm-9">
+	   				 轻量化的业务系统运行环境信息采集和处理工具
+	   			 </div>	
+	  			
+	  		</div>		 
+		 	</h1>
+		 </div>
+ 		
+		<div class="row">
+			 
+			
+			 <div class="col-sm-12">
+			 	<div class="form-group">
+			 		<label class="control-label"  for="command">请在下框输入要批量执行的命令</label>
+			 		<div class="input-group">
+			 			<span class="input-group-addon">></span>
+			 			<input type="text" class="form-control" placeholder="请输入要执行的命令" id="command">
+			 		</div>
+			 		 
+			 	</div>
+				
+			 </div>
+			 
+	  	  
+		</div><!-- 命令输入    行 -->
+		<div class="row">
+			<div class="col-sm-1"><button id="collect" class="btn  btn-default btn-block" type="button">执&nbsp;&nbsp;行</button></div>
+			 <div class="col-sm-8"></div>
+			 <div class="col-sm-2">
+		 		 <input type="checkbox" checked id="autoChkbox" />是否自动导出 
+		 	</div>
+			 <div class="col-sm-1">
+				 <button id="export" class="btn  btn-default  btn-block" type="button">导&nbsp;&nbsp;出</button>
+			 </div>
+			 
+	  	  
+		</div>
+		<div class="row">
+			 
+				<div class="progress">
+					<div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;">命令执行进度</div>
+				</div>
+				
+			 
+		</div>
+    	<div class="row">
+    		<table class="table table-bordered">
+              <thead>
+                <tr class="table-head">
+                  <th>序&nbsp;号</th>
+                  <th>业务系统</th>
+                  <th>主机名</th>
+                  <th>服务器类型</th>
+                  <th>IP地址</th>
+                  <th>操作系统</th>
+                  <th>返回结果</th>
+                  
+                </tr>
+              </thead>
+              <tbody>
+             
+               
+              </tbody>
+       		 </table>
+    	</div>
+	
+  	 
+    </div><!-- 行结束 -->
+    
+    
+    <iframe src="" style="display:none;" id="exportIframe"></iframe>
+    <!-- DWR -->
+    <script type="text/javascript" src="dwr/util.js"></script>    
+	<script type="text/javascript" src="dwr/engine.js"></script> 
+	<!-- 页面推环境初始化 -->
+	<script type="text/javascript" src="dwr/interface/DWRContexInitor.js"></script>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="jquery/jquery-1.11.1.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="bootstrap/js/bootstrap.min.js"></script>
+    <script src="js/json/json_parse.js"></script>
+    <script src="js/collecttool.js"></script>
+    <script type="text/javascript">
+	   
+    	
+		//实时显示采集进度
+		function show(msg){  
+			console.log(msg);
+			msg = JSON.parse(msg);
+			 
+		   var progressBar =  $("#progressBar");
+		   var progressBarLabel = progressBar;
+		   progressBarLabel.text(msg.msg+msg.nowNum+"/"+msg.maxNum+"		"+msg.ip); 
+		   msg.maxNum == 0?progressBar.css('width','100%'):progressBar.css('width',msg.nowNum/msg.maxNum*100+'%')
+		}  
+    	$(document).ready(function(){
+    		
+    		 //表示允许使用推送技术  
+	        dwr.engine.setActiveReverseAjax(true); 
+    		CollectTool.toggleAutoBind('#autoChkbox')
+    		$('#collect').click(function(){
+    			
+    			var that = this;
+    			
+    			//将上一次采集到的主机表格清空
+    			var tBody = $('table tbody');
+    			tBody.html('');
+    			
+    			var command = $('#command').val();
+    			//检查输入命令的合法性
+    			if(!CollectTool.validate(command)){
+    				alert("请输入合法命令");
+    				return;
+    			}
+    			//单击执行按钮进入采集过程，这个过程中所有按钮不能操作
+    			CollectTool.disableButtons(['#collect','#export']);
+    			
+	      		var url  = '/ssh/collect/bat?command='+command;
+	        	$.post(url,function(data){
+    				data = JSON.parse(data);
+    				
+    				if(data.length > 0 ){   //采集之后并且有服务器被采集
+    					//显示采集到的服务器列表
+    					for(var i = 0;i<data.length;i++){
+        					var tr = $('<tr></tr>');
+        					tr.appendTo(tBody);
+        					
+        					$('<td></td>').text(i+1).appendTo(tr);//序号
+        					
+        					$('<td></td>').text(data[i].buss).appendTo(tr);//业务名称
+        					$('<td></td>').text(data[i].hostName).appendTo(tr);//主机名
+        					$('<td></td>').text(data[i].hostType).appendTo(tr);//类型（数据库服务器or应用服务器）
+        					
+        					$('<td></td>').text(data[i].ip).appendTo(tr);//IP
+        					$('<td></td>').text(data[i].os?data[i].os:"未知").appendTo(tr);	//操作系统 
+        					$('<td style="white-space:pre;"></td>').text(data[i].commandResult).appendTo(tr);//命令执行的返回结果
+        					
+        				}
+    					if(CollectTool.isAutoExport()){
+    				 		//下载文件
+    						CollectTool.exportFileFrom({
+    							url:'/ssh/export',
+    							buttonIds:['#collect','#export']
+    						});
+    					}
+    					
+    				}else{//没有服务器被采集  不导出文件  后续可添加提示或其他操作
+						
+    				}
+    				
+    				//采集完毕，恢复按钮
+    				that.disabled = false;
+    				CollectTool.enableButtons(['#export','#collect']);
+    				 
+    			}); 
+    		});
+    		//导出采集到的主机信息到文件
+    		
+    	});
+    </script>
+  </body>
+</html>

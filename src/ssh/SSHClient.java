@@ -3,7 +3,9 @@ package ssh;
 import host.FileManager;
 import host.Host;
 import host.Host.Middleware.App;
+import host.HostBase;
 import host.LoadBalancer;
+import host.TinyHost;
 import host.command.CollectCommand;
 import host.regex.Regex;
 import host.regex.Regex.CommonRegex;
@@ -972,7 +974,7 @@ public class SSHClient {
      * @param shell
      * @param h
      */
-    private static void grantRoot(final Shell shell,final Host h){
+    private static void grantRoot(final Shell shell,final HostBase h){
     	logger.info(h.getIp()+"提高用户权限");
     	//当需要特别权限的情况下使用root用户
 		String rootUser = h.getRootUser();
@@ -994,7 +996,7 @@ public class SSHClient {
      * @param shell
      * @param h
      */
-    private static void collectOs(final Shell shell,final Host h){
+    private static void collectOs(final Shell shell,final HostBase h){
     	 
 		shell.executeCommands(new String[] { CollectCommand.CommonCommand.HOST_OS.toString() });
 		String cmdResult = shell.getResponse();
@@ -1062,10 +1064,9 @@ public class SSHClient {
 						}finally{
 							//此负载均衡采集完毕（包括采集配置完成和无法链接到主机的情况）
 							
-							synchronized(resource){
-							 	logger.info(lb.getIp()+"负载均衡采集完毕---------");
-								resource.increase();
-							}
+							 resource.increase();
+							 logger.info(lb.getIp()+"负载均衡采集完毕---------");
+							 
 						}
 						
 					}
@@ -1082,7 +1083,7 @@ public class SSHClient {
 				logger.info("--------等待负载均衡采集---------");
 				while(resource.getNumber() < loadBalanceMaxNum){
 					HintMsg msg = new HintMsg(resource.getNumber(),loadBalanceMaxNum,"","当前负载均衡配置文件下载进度,已完成"+resource.getNumber()+"个,共"+loadBalanceMaxNum+"个");
-					DwrPageContext.run(JSONObject.fromObject(msg).toString());
+					DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
 					logger.info(msg);
 					try {
 						resource.wait();
@@ -1095,7 +1096,7 @@ public class SSHClient {
 			}
 		}
 		HintMsg msg = new HintMsg(resource.getNumber(),loadBalanceMaxNum,"下载完毕","当前负载均衡配置文件下载进度");
-		DwrPageContext.run(JSONObject.fromObject(msg).toString());
+		DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
 		logger.info(msg);
 		return allLoadBalancerFarmAndServerInfo;
     }
@@ -1109,18 +1110,171 @@ public class SSHClient {
     	
     	if(maxNum == 0){
     		HintMsg msg = new HintMsg(0,0,"无","");
-    		DwrPageContext.run(JSONObject.fromObject(msg).toString());
+    		DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
     		logger.info(msg);
     		return;
     	} 
     		//采集负载均衡配置
     	logger.info("------开始采集负载均衡-----");
     	StringBuilder allLoadBalancerFarmAndServerInfo  = collectLoadBalancer();
-    	/*StringBuilder allLoadBalancerFarmAndServerInfo  = null;*/
     	logger.info("------开始采集主机-----");
     	collectHosts(list,allLoadBalancerFarmAndServerInfo);
     }
     
+    public  static void startBat(final List<TinyHost> list,final String command,final boolean isNotCollected){
+    	//向用户传递命令执行进度
+    	int maxNum = list.size();
+    	
+    	if(maxNum == 0){
+    		HintMsg msg = new HintMsg(0,0,"无","");
+    		DwrPageContext.realtimeBat(JSONObject.fromObject(msg).toString());
+    		logger.info(msg);
+    		return;
+    	} 
+    	//执行命令 并批处理主机
+    	batHosts(list,command,isNotCollected);
+    	
+    }
+    /**
+     * 
+     * @param list	批处理的主机
+     * @param command	要在所有主机上执行的命令
+     */
+    public static void batHosts(final List<TinyHost> list,final String command,final boolean isNotCollected){
+    	
+    	final int maxNum = list.size(), nowNum = 0;
+    	final CollectedResource resource = new CollectedResource(0); 
+    	if(list.size() > 0){
+    		for (Iterator<TinyHost> it = list.iterator();it.hasNext();) {
+    			final TinyHost h = it.next();
+    			
+    			Thread thread = new Thread(new Runnable(){
+
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+						
+						logger.info(h);
+		    			 
+		    			// 初始化服务器连接信息
+		    			SSHClient ssh = new SSHClient(h.getIp(), h.getJkUser(), h.getJkUserPassword());
+ 
+		    			// 建立连接
+		    			Shell shell;
+		    			try {
+		    				shell = new Shell(h.getIp(), SSH_PORT,h.getJkUser(), h.getJkUserPassword());
+		    				shell.setTimeout(2*1000);
+		    				
+		    				logger.error("	连接到 	"+h.getIp());
+			    			
+			    			//grantRoot(shell,h);
+		    				//第一次执行命令  需要采集设备信息
+			    			if(isNotCollected){
+			    				
+				    			collectOs(shell,h);
+				    			
+				    			//获取主机名
+				    			shell.executeCommands(new String[] { "uname -n" });
+				    			String cmdResult = shell.getResponse();
+				    			logger.info(h.getIp()+cmdResult);
+				    			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.HOST_NAME);
+				    			logger.info(h.getIp()+"主机名="+shell.parseInfoByRegex(Regex.AixRegex.HOST_NAME,cmdResult,1));
+				    			h.setHostName(shell.parseInfoByRegex(Regex.AixRegex.HOST_NAME,cmdResult,1));
+				    			
+				    			/*********************
+				    			 * 检测是否安装了Oracle数据库
+				    			 *********************/
+				    			List<Host.Database> dList = new ArrayList<Host.Database>(); 
+				    			shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
+				    			cmdResult = shell.getResponse();
+				    			logger.info(h.getIp()+cmdResult);
+				    			 
+				    			boolean isExistOracle = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString()).length >=4?true:false;
+				    			
+				    			/*********************
+				    			 * 检查是否安装了weblogic中间件
+				    			 *********************/
+				    			List<Host.Middleware> mList = new ArrayList<Host.Middleware>();  
+				    			shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+				    			cmdResult = shell.getResponse();
+
+				    			logger.info(h.getIp()+cmdResult); 
+				    			 
+				    			boolean isExistWeblogic = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString()).length >=4?true:false;
+				    			h.setHostType((isExistOracle?"数据库服务器":"")+(isExistWeblogic?" 应用服务器":""));
+			    			}
+			    				
+				    			
+				    			/*********************
+				    			 * 执行命令
+				    			 **********************/
+				    			
+				    			shell.executeCommands(new String[]{command});
+				    			String cmdResult = shell.getResponse();
+				    			String[] resultLines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+				    			String commandPrompt = Pattern.quote(resultLines[resultLines.length-1]);
+				    			
+				    			logger.info(h.getIp()+cmdResult);
+				    			logger.info(h.getIp()+"正则表达式="+command+"\\s+([\\s\\S]+?)"+commandPrompt);
+				    			logger.info(h.getIp()+"命令执行结果="+shell.parseInfoByRegex(Pattern.quote(command)+"\\s+([\\s\\S]+?)"+commandPrompt,cmdResult,1));
+				    		 
+				    			h.setCommandResult(shell.parseInfoByRegex(Pattern.quote(command)+"\\s+([\\s\\S]+?)"+commandPrompt,cmdResult,1));
+				    			
+				    			 
+			    			/*if("AIX".equalsIgnoreCase(h.getOs())){
+			    				 
+			    			}else if("LINUX".equalsIgnoreCase(h.getOs())){
+			    				 
+			    			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
+			    				
+			    			}*/
+			    			logger.info(h);
+			    			shell.disconnect();
+		    			} catch (ShellException e) {
+		    				// TODO Auto-generated catch block
+		    				logger.error("无法采集主机"+h.getIp()+"，连接下一个主机");
+		    				e.printStackTrace();
+		    			}finally{
+		    				synchronized(resource){
+		    					logger.info(h.getIp()+"主机采集完毕---------");
+		    					resource.increase();
+		    				}
+		    			}
+		    			
+					}
+    				
+    			},h.getIp());
+    			
+    			thread.start();
+
+    		}
+    		 
+    		synchronized(resource){
+    			
+				while(resource.getNumber() < maxNum){
+					HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"","当前命令执行进度,已完成"+resource.getNumber()+"个,共"+maxNum+"个");
+					DwrPageContext.realtimeBat(JSONObject.fromObject(msg).toString()); 
+					 logger.info(msg);
+					try {
+						resource.wait();
+					 } catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+    		
+    		}
+    	}
+    	
+    	HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"采集完毕","当前命令执行进度");
+		DwrPageContext.realtimeBat(JSONObject.fromObject(msg).toString());
+		logger.info(msg);
+    }
+    /**
+     * 采集主机
+     * @param list	主机列表
+     * @param allLoadBalancerFarmAndServerInfo   负载均衡上采集到的配置信息
+     */
     public static void collectHosts(final List<Host> list,final StringBuilder allLoadBalancerFarmAndServerInfo){
     	
     	final int maxNum = list.size(), nowNum = 0;
@@ -1187,7 +1341,7 @@ public class SSHClient {
     			
 				while(resource.getNumber() < maxNum){
 					HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"","当前主机采集进度,已完成"+resource.getNumber()+"个,共"+maxNum+"个");
-					DwrPageContext.run(JSONObject.fromObject(msg).toString());
+					DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
 					 
 					logger.info(msg);
 					try {
@@ -1202,7 +1356,7 @@ public class SSHClient {
     	}
     	
     	HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"采集完毕","当前主机采集进度");
-		DwrPageContext.run(JSONObject.fromObject(msg).toString());
+		DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
 		logger.info(msg);
     }
     /**
