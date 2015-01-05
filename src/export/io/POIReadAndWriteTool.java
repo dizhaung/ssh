@@ -71,7 +71,8 @@ public class POIReadAndWriteTool {
         //写入数据  
         wb.write(stream);  
         //关闭文件流  
-        stream.close();  
+        stream.close();
+        
     }
     /** 
      * 设置字体 
@@ -202,12 +203,12 @@ public class POIReadAndWriteTool {
     	printTableToSheet(host.revserseServerBaseInfo(),sheet);
     	
     	//打印网口类型表格
+    	 if(detail != null)
+    		 printTableToSheet(detail.reverseCardListToTable(),sheet);
     	 
-    	 printTableToSheet(detail.reverseCardListToTable(),sheet);
-    	
     	//打印磁盘类型表格
-    	
-    	 printTableToSheet( detail.reverseFsListToTable(),sheet);
+    	 if(detail != null)
+    		 printTableToSheet( detail.reverseFsListToTable(),sheet);
     }
     
     private  int nextRowNum = 0;
@@ -292,7 +293,7 @@ public class POIReadAndWriteTool {
         hostList.add(host);
         host.setBuss("测试服务器2数据库");
         host.setIp("10.204.16.150");
-        host.setHostType("数据库服务器   应用服务器");
+        
         host.setOs("AIX");
        
         Host.HostDetail hostDetail = new Host.HostDetail();
