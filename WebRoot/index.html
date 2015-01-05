@@ -50,7 +50,7 @@
 		<div class="row">
 			 
 				<div class="progress">
-					<div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;"></div>
+					<div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;">采集进度</div>
 				</div>
 				
 			 
@@ -122,7 +122,7 @@
     			var tBody = $('table tbody');
     			tBody.html('');
     			//初始化到这个页面的DWR推上下文环境
-    			DWRContexInitor.init("/index.html","show");  
+    			//DWRContexInitor.init("/index.html","show");  
 	      		
     			$.post('/ssh/collect',function(data){
     				data = JSON.parse(data);

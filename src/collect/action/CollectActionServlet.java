@@ -38,8 +38,7 @@ public class CollectActionServlet extends HttpServlet {
 		// TODO Auto-generated method stub
 		//设置返回内容的编码格式
 		resp.setCharacterEncoding("utf-8");
-		 
-		String userDir = req.getRealPath("/");
+		
 		logger.info("---读取主机登录信息文件---");
 		//读取主机登录信息文件
 		List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));

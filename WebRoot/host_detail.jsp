@@ -188,7 +188,7 @@
 									<tr>
 										<th>序号</th>
 										<th>文件路径</th>
-										<th>文件大小</th>
+										<th>文件大小(MB)</th>
 									</tr>
 								</thead>
 								<tbody>
