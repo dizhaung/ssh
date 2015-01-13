@@ -430,8 +430,7 @@ public class SSHClient {
 		
 		//检测是否安装了Oracle数据库
 
-		List<Host.Database> dList = new ArrayList<Host.Database>();
-		h.setdList(dList);
+		  
 		shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
 		cmdResult = shell.getResponse();
 		logger.info(cmdResult);
@@ -441,7 +440,7 @@ public class SSHClient {
 		//安装有Oracle
 		if(isExist){
 			Host.Database db = new Host.Database();
-			dList.add(db);
+			h.addDatabase(db);
 			//
 			db.setType("Oracle");
 			db.setIp(h.getIp());
@@ -518,8 +517,7 @@ public class SSHClient {
 		
 		
 		//weblogic中间件信息
-		List<Host.Middleware> mList = new ArrayList<Host.Middleware>();
-		h.setmList(mList);
+		 
 		shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
 		cmdResult = shell.getResponse();
 
@@ -529,7 +527,7 @@ public class SSHClient {
 		//存在weblogic
 		if(lines.length>4){
 			Host.Middleware mw = new Host.Middleware();
-			mList.add(mw);
+			h.addMiddleware(mw);
 			mw.setType("WebLogic");
 			mw.setIp(h.getIp());
 			//部署路径
@@ -559,15 +557,17 @@ public class SSHClient {
 	
     }
     /**
-     * 
-     * @param shell     建立ssh通道，连续发起采集命令
-     * @param ssh	建立ssh通道，只能发起单个采集命令
-     * @param h		
-     * @param allLoadBalancerFarmAndServerInfo  所有的负载均衡的配置文件信息
+     * 采集
+     * @param shell
+     * @param ssh
+     * @param h
+     * @param portListFromLoad
+     * @date 2015-1-9下午4:46:27
+     * @author HP
      */
-    private static void collectAIX(Shell shell,final SSHClient ssh,final Host h,final String allLoadBalancerFarmAndServerInfo){
-
-		Host.HostDetail hostDetail = new Host.HostDetail();
+   public static void collectHostDetailForAIX(final Shell shell,final SSHClient ssh,final Host h,final List<PortLoadConfig> portListFromLoad){
+    
+	   Host.HostDetail hostDetail = new Host.HostDetail();
 		h.setDetail(hostDetail);
 		hostDetail.setOs(h.getOs());//主机详细信息页的操作系统类型
 		//获取主机型号
@@ -711,32 +711,8 @@ public class SSHClient {
 			hostDetail.setClusterServiceIP("NONE");
 		}
 		
+
 		
-		/****************
-		 * 应用的负载均衡
-		 ****************/
-	 
-		///正则匹配出Farm及对应的port
-		//logger.info();
-	 	Pattern farmAndPortRegex = Pattern.compile(Regex.CommonRegex.FARM_PORT_PREFIX.plus(RegexEntity.newInstance(h.getIp())).plus(Regex.CommonRegex.FARM_PORT_SUFFIX).toString());
-		Matcher farmAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
-		
-		List<PortLoadConfig> portListFromLoad = new ArrayList();
-		while(farmAndPortMatcher.find()){
-			PortLoadConfig port = new PortLoadConfig();
-			portListFromLoad.add(port);
-			port.setFarm(farmAndPortMatcher.group(1));
-			port.setPort(farmAndPortMatcher.group(2));
-			///匹配端口对应的服务地址（虚地址）和服务端口
-			Pattern serviceIpAndPortRegex = Pattern.compile(Regex.CommonRegex.SERVICEIP_PORT.plus(RegexEntity.newInstance(port.getFarm())).toString());
-			Matcher serviceIpAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
-			if(serviceIpAndPortMatcher.find()){
-				port.setServiceIp(serviceIpAndPortMatcher.group(1));
-				port.setServicePort(serviceIpAndPortMatcher.group(3));
-			}
-			
-			
-		}
 		//主机被负载均衡
 		if(portListFromLoad.size() > 0){
 			hostDetail.setIsLoadBalanced("是");
@@ -803,13 +779,55 @@ public class SSHClient {
 			
 		}
 		hostDetail.setFsList(fsList);
+    }
+   /**
+    * 
+    * @param allLoadBalancerFarmAndServerInfo
+    * @date 2015-1-9下午4:06:47
+    * @author HP
+    */
+   public static List<PortLoadConfig> parsePortList(final Host h,final String allLoadBalancerFarmAndServerInfo){
+	   /****************
+		 * 应用的负载均衡
+		 ****************/
+	 
+		///正则匹配出Farm及对应的port
+		//logger.info();
+	 	Pattern farmAndPortRegex = Pattern.compile(Regex.CommonRegex.FARM_PORT_PREFIX.plus(RegexEntity.newInstance(h.getIp())).plus(Regex.CommonRegex.FARM_PORT_SUFFIX).toString());
+		Matcher farmAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
 		
-		//检测是否安装了Oracle数据库
+		List<PortLoadConfig> portListFromLoad = new ArrayList();
+		while(farmAndPortMatcher.find()){
+			PortLoadConfig port = new PortLoadConfig();
+			portListFromLoad.add(port);
+			port.setFarm(farmAndPortMatcher.group(1));
+			port.setPort(farmAndPortMatcher.group(2));
+			///匹配端口对应的服务地址（虚地址）和服务端口
+			Pattern serviceIpAndPortRegex = Pattern.compile(Regex.CommonRegex.SERVICEIP_PORT.plus(RegexEntity.newInstance(port.getFarm())).toString());
+			Matcher serviceIpAndPortMatcher = farmAndPortRegex.matcher(allLoadBalancerFarmAndServerInfo.toString());
+			if(serviceIpAndPortMatcher.find()){
+				port.setServiceIp(serviceIpAndPortMatcher.group(1));
+				port.setServicePort(serviceIpAndPortMatcher.group(3));
+			}
+			
+			
+		}
+		return portListFromLoad;
+   }
+   
+   /**
+    * 
+    * @param shell
+    * @param h
+    * @date 2015-1-9下午3:42:34
+    * @author HP
+    */
+   	public static void collectOracleForAIX(Shell shell,final Host h){
 
-		List<Host.Database> dList = new ArrayList<Host.Database>();
-		h.setdList(dList);
+		//检测是否安装了Oracle数据库
+ 
 		shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
-		cmdResult = shell.getResponse();
+		String cmdResult = shell.getResponse();
 		logger.info(h.getIp()+cmdResult);
 		 
 		boolean isExistOracle = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString()).length >=4?true:false;
@@ -817,7 +835,7 @@ public class SSHClient {
 		//安装有Oracle
 		if(isExistOracle){
 			Host.Database db = new Host.Database();
-			dList.add(db);
+			h.addDatabase(db);
 			db.setType("Oracle");
 			db.setIp(h.getIp());
 			//找到oracle用户的目录
@@ -893,7 +911,7 @@ public class SSHClient {
 			cmdResult = shell.getResponse();
 			logger.info(h.getIp()+cmdResult);
 			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.ORACLE_VERSION);
-			version = shell.parseInfoByRegex(Regex.AixRegex.ORACLE_VERSION,cmdResult,1);
+			String version = shell.parseInfoByRegex(Regex.AixRegex.ORACLE_VERSION,cmdResult,1);
 			db.setVersion(version);
 			//由于进入了sqlplus模式，在此断开连接，退出重新登录
 			shell.disconnect();
@@ -911,21 +929,31 @@ public class SSHClient {
 		
 		
 
+   	}
+   	/**
+   	 * 采集weblogic的信息
+   	 * @param shell
+   	 * @param h
+   	 * @param portListFromLoad
+   	 * @date 2015-1-9下午4:45:15
+   	 * @author HP
+   	 */
+   	public static void collectWeblogicForAIX(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+
 		/*********************
 		 * weblogic中间件信息
 		 *********************/
-		List<Host.Middleware> mList = new ArrayList<Host.Middleware>();
-		h.setmList(mList);
+		 
 		shell.executeCommands(new String[] { "" });
 		shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
-		cmdResult = shell.getResponse();
+		String cmdResult = shell.getResponse();
 
 		logger.info(h.getIp()+cmdResult); 
 		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 		//存在weblogic
 		if(lines.length>4){
 			Host.Middleware mw = new Host.Middleware();
-			mList.add(mw);
+			h.addMiddleware(mw);
 			mw.setType("WebLogic");
 			mw.setIp(h.getIp());
 			//部署路径
@@ -939,7 +967,6 @@ public class SSHClient {
 			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.WEBLOGIC_VERSION);
 			mw.setVersion(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_VERSION,deploymentDir,1));
 			
-			System.out.println(deploymentDir+"="+version);
 			//JDK版本
 			 
 			logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.WEBLOGIC_JDK_JAVA_COMMAND);
@@ -967,7 +994,223 @@ public class SSHClient {
 			mw.setAppList(appList);
 			
 		}
-	
+   	}
+    /**
+     * 采集aix主机信息
+     * @param shell     建立ssh通道，连续发起采集命令
+     * @param ssh	建立ssh通道，只能发起单个采集命令
+     * @param h		
+     * @param allLoadBalancerFarmAndServerInfo  所有的负载均衡的配置文件信息
+     */
+    private static void collectAIX(Shell shell,final SSHClient ssh,final Host h,final String allLoadBalancerFarmAndServerInfo){
+    	List<PortLoadConfig> portListFromLoad  =   parsePortList(h, allLoadBalancerFarmAndServerInfo);
+		collectHostDetailForAIX(shell, ssh, h, portListFromLoad); 
+		collectOracleForAIX(shell, h);
+		collectWeblogicForAIX(shell, h, portListFromLoad);
+		/*****************
+		 * webshpere  中间件
+		 ******************/
+		
+		
+    }
+    
+    /**
+     * 采集DB2数据库
+     * 
+     * @date 2015-1-8下午4:49:58
+     * @author HP
+     */
+    public static void collectDB2ForAix(final Shell shell,final Host h){
+    	//检测安装有db2数据库，但是没有启动实例的情况
+    	shell.executeCommands(new String[] { "ps -ef|grep db2fmcd" });
+    	String cmdResult = shell.getResponse();
+    	String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+    	
+    	if(lines.length > 3){//安装了db2，没有启动实例
+    		Host.Database db = new Host.Database();
+			h.addDatabase(db);
+    		shell.executeCommands(new String[] { "strings /var/db2/global.reg" });
+    		cmdResult = shell.getResponse();
+    		
+    		logger.info(cmdResult);
+    		Matcher db2InstanceUserMatcher  = Pattern.compile("(/[\\S]+)*/([\\S]+?)/sqllib").matcher(cmdResult);
+    		
+    		List<String> db2AllInstanceUserList = new ArrayList();
+    		while(db2InstanceUserMatcher.find()){
+    			String userDirectory = db2InstanceUserMatcher.group();
+    			logger.info("用户根目录="+userDirectory);
+    			//定位到用户根目录，如果可以定位到用户根目录说明  这个实例用户是有效的，可以切换
+    			shell.executeCommands(new String[] { "cd "+userDirectory });
+    			cmdResult = shell.getResponse();
+    			logger.info("定位到用户根目录="+cmdResult);
+    	    	lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+    			if(lines.length > 2){//说明 无法定位到用户的根目录，即这个用户的根目录是不存在的
+    				continue;
+    			}
+    			db2AllInstanceUserList.add(db2InstanceUserMatcher.group(2));
+    		}
+    		logger.info("db2实例用户="+db2AllInstanceUserList);
+    		
+    		//取每个实例用户所对应实例的数据库
+    		boolean isNotCollectVersion = true;
+    		final Set<String> dataFileDirSet = new HashSet();
+    		for(String userName:db2AllInstanceUserList){
+
+    			grantRoot(shell,h);
+    			
+    			///切换到运行实例的DB2用户
+    			shell.executeCommands(new String[] { "su - "+userName });
+    			//多个用户的话db2安装路径和版本只在第一个用户登录的情况下采集一次
+    			if(isNotCollectVersion){
+    				///db2安装路径
+        			shell.executeCommands(new String[] { "db2level" });
+        			cmdResult = shell.getResponse();
+        			db.setDeploymentDir(shell.parseInfoByRegex("Product is installed at \"([\\s\\S]+?)\"", cmdResult, 1));
+        			
+        			//db2版本
+        			db.setVersion(shell.parseInfoByRegex("Informational tokens are \"([\\s\\S]+?)\"", cmdResult, 1));
+        			
+        			isNotCollectVersion = !isNotCollectVersion;
+    			}
+    			//db2数据库名称
+    			shell.executeCommands(new String[] { "db2 list database directory" });
+    			cmdResult = shell.getResponse();
+    			
+    			logger.info("数据库名称和数据文件路径="+cmdResult);
+    			///找出实例下的所有数据库，每个实例下的数据库可以重名，因为可能是不同的数据库
+    			Matcher  dbNameMatcher = Pattern.compile("Database name\\s*?=\\s*([\\s\\S]*?)\\s").matcher(cmdResult);
+    			List<String> dbNameList = new ArrayList();
+    			while(dbNameMatcher.find()){
+    				dbNameList.add(dbNameMatcher.group(1));
+    			}
+    			db.setDbName(dbNameList.toString());
+    			
+    			
+    			//数据文件路径 (多个数据库可能对应一个数据文件路径) 
+    			Matcher  dataFileDirMatcher = Pattern.compile("Local database directory\\s*?=\\s*([\\s\\S]*?)\\s").matcher(cmdResult);
+    			
+    			while(dataFileDirMatcher.find()){
+    				dataFileDirSet.add(dataFileDirMatcher.group(1));
+    			}
+    			
+    			db.setDataFileDir(dataFileDirSet.toString());
+    			
+    			
+        	}
+    		
+    		
+    		//db2数据文件及其大小
+			grantRoot(shell,h);//先提升用户的权限，防止权限不够无法执行ls du等命令
+			for(String dataFileDir:dataFileDirSet){
+				shell.executeCommands(new String[] { "cd "+dataFileDir,"ls" });
+				cmdResult = shell.getResponse();
+				
+				logger.info(h.getIp()+cmdResult); 
+				lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+				
+				if(lines.length > 3 ) ///除去命令行和提示符行，文件夹内存在数据文件，才去执行计算数据文件大小的命令
+				{
+					shell.executeCommands(new String[] {"du -sm *" });
+					cmdResult = shell.getResponse();
+					
+					logger.info(h.getIp()+"文件大小和名称="+cmdResult); 
+					lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+					
+					List<Host.Database.DataFile> dfList = new ArrayList();
+					db.setDfList(dfList);
+					// 第0行是计算文件大小和列出文件名的命令行    最后一行是提示符行
+					for(int i = 1,size = lines.length-1;i < size;i++){
+						String[] sizeAndName = lines[i].split("[\\s]+");
+						Host.Database.DataFile dataFile = new Host.Database.DataFile();
+						dataFile.setFileSize(sizeAndName[0]);
+						dataFile.setFileName(dataFileDir+"/"+sizeAndName[1]);//不同数据文件路径下可能有同名的文件，显示在页面上会造成困扰，故加上路径名
+						dfList.add(dataFile);
+					}
+				}
+			}
+			
+			logger.info(db);
+    	}
+    	
+    	
+    }
+    
+    /**
+     * 
+     * @param shell
+     * @param h
+     * @return
+     * @date 2015-1-12下午6:02:51
+     * @author HP
+     */
+    public static Set<String>	collectDB2RunningUserSet(final Shell shell,final Host h){
+    	//检测安装有db2数据库，同时也启动了实例的情况，通过下面的命令，可以知道启动了哪些实例
+		shell.executeCommands(new String[] { "ps -ef|grep db2sysc" });
+		String cmdResult = shell.getResponse();
+		
+		logger.info(h.getIp()+cmdResult); 
+		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+		
+		final Set<String>  db2RunningUserSet = new HashSet();
+		if(lines.length > 3){//启动了db2实例
+		
+			//运行db2实例的用户名,至少有一个用户在运行db2实例
+			for(String line:lines){
+				if(!Pattern.compile("grep db2sysc").matcher(line).find()){
+					Matcher db2UserMatcher = Pattern.compile("^\\s*([\\s\\S]+?)\\s").matcher(line);
+					if(db2UserMatcher.find()){
+						db2RunningUserSet.add(db2UserMatcher.group(1));
+					}
+						
+				}
+			}
+			logger.info("运行实例的db2用户列表="+db2RunningUserSet);
+		}
+		return db2RunningUserSet;
+    }
+	 /**
+	  * 采集websphere中间件
+	  * @param shell
+	  * @param h
+	  * @date 2015-1-7下午4:30:09
+	  * @author HP
+	  */
+    public static void collectWebSphereForAIX(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+    	shell.executeCommands(new String[] { "" });
+		shell.executeCommands(new String[] { "ps -ef|grep websphere" });
+		String cmdResult = shell.getResponse();
+		logger.info(h.getIp()+cmdResult); 
+		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+		
+		//检查有没有安装websphere
+		if(lines.length > 4){
+			Host.Middleware  mw = new Host.Middleware();
+			h.addMiddleware(mw);
+			
+			mw.setType("WebSphere");
+			mw.setIp(h.getIp());
+			//webSphere安装路径
+			String  deploymentDir = shell.parseInfoByRegex(Pattern.quote("-Dwas.install.root=")+"([\\s\\S]+?)\\s",cmdResult,1);
+			mw.setDeploymentDir(deploymentDir);
+			
+			//webSphere应用部署路径
+			
+			//webSphere  JDK版本
+			shell.executeCommands(new String[] { deploymentDir+"/java/bin/java -version" });
+			cmdResult = shell.getResponse();
+			
+			logger.info(h.getIp()+cmdResult);
+			mw.setJdkVersion(shell.parseInfoByRegex("java version \"([\\s\\S]*?)\"",cmdResult,1));
+			
+			//webSphere版本
+			shell.executeCommands(new String[] { "cd "+deploymentDir+"/bin"});
+			shell.executeCommands(new String[] { "./versionInfo.sh"});
+			cmdResult = shell.getResponse(); 
+			mw.setVersion(shell.parseInfoByRegex("Version\\s+([\\d.]+)",cmdResult,1));
+			logger.info(h.getIp()+cmdResult);
+			
+			logger.info(mw);
+		}
     }
     /**
      * 提升为root权限
