@@ -180,7 +180,7 @@
 					<!-- 数据库 版本等信息行结束 -->
 
 					<div class="row">
-						<div class="col-sm-8">
+						<div class="col-sm-12">
 
 							<table class="table  table-bordered table-hover">
 								<caption>数据库数据文件列表</caption>
@@ -241,7 +241,7 @@
 					</div>
 					<!-- 中间件版本等      行结束 -->
 					<div class="row">
-						<div class="col-sm-8">
+						<div class="col-sm-12">
 
 							<table class="table table-bordered table-hover">
 								<caption>应用列表</caption>
