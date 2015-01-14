@@ -1,11 +1,12 @@
 package host;
 
-import host.regex.Regex;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
+import constants.regex.Regex;
 
 
 /**
@@ -359,8 +360,8 @@ public class Host extends HostBase{
 	}
 	
 	
-	private List<Database> dList;
-	private List<Middleware> mList;
+	private List<Database> dList = new ArrayList();
+	private List<Middleware> mList = new ArrayList();
 	/**
 	 * @author HP
 	 * @return 一个可打印的包含数据库信息的表格列表
@@ -484,9 +485,6 @@ public class Host extends HostBase{
 		}
 		return dList;
 	}
-	public void setdList(List<Database> dList) {
-		this.dList = dList;
-	}
 	
 
 	public List<Middleware> getmList() {
@@ -495,10 +493,15 @@ public class Host extends HostBase{
 		}
 		return mList;
 	}
-	public void setmList(List<Middleware> mList) {
-		this.mList = mList;
-	}
+	
 
+	public void addDatabase(final Database db){
+		dList.add(db);
+	}
+	
+	public void addMiddleware(final Middleware mw){
+		mList.add(mw);
+	}
 	/**
 	 * 数据库的详细信息
 	 * @author HP

@@ -4,7 +4,6 @@ import host.FileManager;
 import host.Host;
 import host.Host.HostDetail;
 import host.LoadBalancer;
-import host.regex.Regex;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +28,8 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.UserInfo;
+
+import constants.regex.Regex;
 
 
 import expect4j.Closure;

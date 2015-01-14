@@ -1,9 +1,10 @@
 package host;
 
-import host.regex.Regex;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import constants.regex.Regex;
 
 public class TinyHost extends HostBase {
 
