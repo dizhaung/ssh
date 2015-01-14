@@ -63,8 +63,8 @@
 								</tr>
 								<tr>
 
-									<td>是否负载均衡</td>
-									<td>负载均衡虚地址:</td>
+									<td>是否负载均衡:${host.detail.isLoadBalanced }</td>
+									<td>负载均衡虚地址:${host.detail.isLoadBalanced }</td>
 									<td></td>
 									<td></td>
 									<td></td>
