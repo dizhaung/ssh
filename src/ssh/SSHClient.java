@@ -7,11 +7,10 @@ import host.HostBase;
 import host.LoadBalancer;
 import host.TinyHost;
 import host.command.CollectCommand;
-import host.regex.Regex;
-import host.regex.Regex.CommonRegex;
-import host.regex.RegexEntity;
+import host.db2.Tablespace;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,6 +36,12 @@ import com.jcraft.jsch.ChannelShell;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
+
+import constants.Format;
+import constants.Unit;
+import constants.regex.Regex;
+import constants.regex.RegexEntity;
+import constants.regex.Regex.CommonRegex;
  
 import expect4j.Closure;
 import expect4j.Expect4j;
@@ -716,8 +721,10 @@ public class SSHClient {
 		//主机被负载均衡
 		if(portListFromLoad.size() > 0){
 			hostDetail.setIsLoadBalanced("是");
+			hostDetail.setLoadBalancedVirtualIP("见应用列表");
 		}else{
 			hostDetail.setIsLoadBalanced("否");
+			hostDetail.setLoadBalancedVirtualIP("无");
 		}
 		logger.info(h.getIp()+portListFromLoad);
 		
@@ -1007,6 +1014,7 @@ public class SSHClient {
 		collectHostDetailForAIX(shell, ssh, h, portListFromLoad); 
 		collectOracleForAIX(shell, h);
 		collectWeblogicForAIX(shell, h, portListFromLoad);
+		collectDB2ForAix(shell,h);
 		/*****************
 		 * webshpere  中间件
 		 ******************/
@@ -1029,31 +1037,16 @@ public class SSHClient {
     	if(lines.length > 3){//安装了db2，没有启动实例
     		Host.Database db = new Host.Database();
 			h.addDatabase(db);
-    		shell.executeCommands(new String[] { "strings /var/db2/global.reg" });
-    		cmdResult = shell.getResponse();
-    		
-    		logger.info(cmdResult);
-    		Matcher db2InstanceUserMatcher  = Pattern.compile("(/[\\S]+)*/([\\S]+?)/sqllib").matcher(cmdResult);
-    		
-    		List<String> db2AllInstanceUserList = new ArrayList();
-    		while(db2InstanceUserMatcher.find()){
-    			String userDirectory = db2InstanceUserMatcher.group();
-    			logger.info("用户根目录="+userDirectory);
-    			//定位到用户根目录，如果可以定位到用户根目录说明  这个实例用户是有效的，可以切换
-    			shell.executeCommands(new String[] { "cd "+userDirectory });
-    			cmdResult = shell.getResponse();
-    			logger.info("定位到用户根目录="+cmdResult);
-    	    	lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
-    			if(lines.length > 2){//说明 无法定位到用户的根目录，即这个用户的根目录是不存在的
-    				continue;
-    			}
-    			db2AllInstanceUserList.add(db2InstanceUserMatcher.group(2));
-    		}
-    		logger.info("db2实例用户="+db2AllInstanceUserList);
-    		
+			db.setType("DB2");
+			List<String> db2AllInstanceUserList = collectAllInstanceUserListForDB2( shell,  h);
     		//取每个实例用户所对应实例的数据库
     		boolean isNotCollectVersion = true;
+    		
+    		List<String> dbNameList = new ArrayList();
     		final Set<String> dataFileDirSet = new HashSet();
+			List<Host.Database.DataFile> dfList = new ArrayList();//所有实例下所有数据库的容器集合
+			db.setDfList(dfList);
+			
     		for(String userName:db2AllInstanceUserList){
 
     			grantRoot(shell,h);
@@ -1065,6 +1058,8 @@ public class SSHClient {
     				///db2安装路径
         			shell.executeCommands(new String[] { "db2level" });
         			cmdResult = shell.getResponse();
+        			
+        			logger.info("db2安装路径="+cmdResult);
         			db.setDeploymentDir(shell.parseInfoByRegex("Product is installed at \"([\\s\\S]+?)\"", cmdResult, 1));
         			
         			//db2版本
@@ -1078,56 +1073,98 @@ public class SSHClient {
     			
     			logger.info("数据库名称和数据文件路径="+cmdResult);
     			///找出实例下的所有数据库，每个实例下的数据库可以重名，因为可能是不同的数据库
-    			Matcher  dbNameMatcher = Pattern.compile("Database name\\s*?=\\s*([\\s\\S]*?)\\s").matcher(cmdResult);
-    			List<String> dbNameList = new ArrayList();
+    			Matcher  dbNameMatcher = Pattern.compile("Database alias\\s*?=\\s*([\\s\\S]*?)\\s").matcher(cmdResult);
+    			List<String> dbNameListForCurrentInstance = new ArrayList();
     			while(dbNameMatcher.find()){
-    				dbNameList.add(dbNameMatcher.group(1));
+    				dbNameListForCurrentInstance.add(dbNameMatcher.group(1));
     			}
-    			db.setDbName(dbNameList.toString());
-    			
-    			
+    			dbNameList.addAll(dbNameListForCurrentInstance);
     			//数据文件路径 (多个数据库可能对应一个数据文件路径) 
     			Matcher  dataFileDirMatcher = Pattern.compile("Local database directory\\s*?=\\s*([\\s\\S]*?)\\s").matcher(cmdResult);
-    			
+    			final Set<String> dataFileDirSetForCurrentInstance = new HashSet();
     			while(dataFileDirMatcher.find()){
-    				dataFileDirSet.add(dataFileDirMatcher.group(1));
+    				dataFileDirSetForCurrentInstance.add(dataFileDirMatcher.group(1));
+    			}
+    			dataFileDirSet.addAll(dataFileDirSetForCurrentInstance);
+    		
+    			
+    			//分别连接到当前实例的数据库
+    			for(String dbName:dbNameListForCurrentInstance){
+    				shell.executeCommands(new String[] { "db2 connect to "+dbName });
+        			cmdResult = shell.getResponse();
+        			
+        			logger.info("连接到db2数据库="+cmdResult);
+        			if(!connectDatabaseSuccess(cmdResult)){continue;}
+        			
+        			//取所有表空间id  和  页面大小
+    				shell.executeCommands(new String[] { "db2 list tablespaces show detail" });
+        			cmdResult = shell.getResponse();
+        			logger.info("db2表空间详情="+cmdResult);
+        			if(!showTablespacesDetailSuccess(cmdResult)) {continue;}
+        			logger.info("TablespacesDetailSuccess");
+        			///表空间ID
+        			Matcher    tablespaceIdMatcher    =  Pattern.compile("Tablespace\\s+ID\\s+=\\s+(\\d+)",Pattern.CASE_INSENSITIVE).matcher(cmdResult);
+        			///表空间页面大小
+        			Matcher    pageSizeMatcher    =  Pattern.compile("Page\\s+size\\s+\\(bytes\\)\\s+=\\s+(\\d+)",Pattern.CASE_INSENSITIVE).matcher(cmdResult);
+        			
+        			List<Tablespace> tablespaceList = new ArrayList();
+        			while(tablespaceIdMatcher.find()){
+        				Tablespace tablespace = new Tablespace();
+        				tablespaceList.add(tablespace);
+        				tablespace.setId(tablespaceIdMatcher.group(1));
+        				if(pageSizeMatcher.find()){
+        					tablespace.setPageSize(Long.parseLong(pageSizeMatcher.group(1)));
+        				}
+        			}
+        			logger.info("表空间列表="+tablespaceList);
+        			//去每个表空间中的容器（数据文件）  容器大小
+        			for(Iterator<Tablespace> it = tablespaceList.iterator();it.hasNext();){
+        				Tablespace tablespace = it.next();
+        				shell.executeCommands(new String[] { "db2 list tablespace containers for "+tablespace.getId()+" show detail" });
+        				cmdResult = shell.getResponse();
+        				
+        				logger.info("db2表空间中的容器="+cmdResult);
+        				if(!showContainersDetailSuccess(cmdResult)){continue;}
+        				
+        				Matcher   containerIdMatcher    =  Pattern.compile("Container\\s+ID\\s+=\\s+(\\d+)",Pattern.CASE_INSENSITIVE).matcher(cmdResult);
+        				Matcher   containerTotalPagesMatcher    =  Pattern.compile("Total\\s+pages\\s+=\\s+(\\d+)",Pattern.CASE_INSENSITIVE).matcher(cmdResult);
+        				Matcher   containerNameMatcher    =  Pattern.compile("Name\\s+=\\s+(\\S+)",Pattern.CASE_INSENSITIVE).matcher(cmdResult);
+        				Matcher   containerTypeMatcher    =  Pattern.compile("Type\\s+=\\s+(\\w+)",Pattern.CASE_INSENSITIVE).matcher(cmdResult);
+            			
+            			List<Tablespace.Container> containerList  = new ArrayList();
+            			tablespace.setContainerList(containerList);
+        				DecimalFormat formator = new DecimalFormat(Format.TWO_DIGIT_DECIMAL.toString());
+            			while(containerIdMatcher.find()){
+        					Tablespace.Container container =  tablespace.new Container();
+        					containerList.add(container);
+        					container.setId(containerIdMatcher.group(1));
+        					if(containerTotalPagesMatcher.find())	container.setTotalPages(Long.parseLong(containerTotalPagesMatcher.group(1)));
+        					if(containerNameMatcher.find())		container.setName(containerNameMatcher.group(1));
+        					if(containerTypeMatcher.find())		container.setType(containerTypeMatcher.group(1));
+        					
+        					float totalSize = 1.0f*container.getTotalPages()*tablespace.getPageSize()/Unit.MB.unitValue();
+        					logger.info(totalSize+"="+container.getTotalPages()+"*"+tablespace.getPageSize()+"/"+Unit.MB.unitValue());
+        					container.setTotalSize(Float.parseFloat(formator.format(totalSize)));
+        					
+        					Host.Database.DataFile dataFile = new Host.Database.DataFile();
+        					//db2容易当做数据文件来看待
+        					dataFile.setFileName(container.getName());
+        					dataFile.setFileSize(formator.format(totalSize));
+        					dfList.add(dataFile);
+        				}
+        			}
+        			logger.info("表空间列表="+tablespaceList);
+    			
+        			
     			}
     			
-    			db.setDataFileDir(dataFileDirSet.toString());
     			
     			
         	}
-    		
-    		
-    		//db2数据文件及其大小
-			grantRoot(shell,h);//先提升用户的权限，防止权限不够无法执行ls du等命令
-			for(String dataFileDir:dataFileDirSet){
-				shell.executeCommands(new String[] { "cd "+dataFileDir,"ls" });
-				cmdResult = shell.getResponse();
-				
-				logger.info(h.getIp()+cmdResult); 
-				lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
-				
-				if(lines.length > 3 ) ///除去命令行和提示符行，文件夹内存在数据文件，才去执行计算数据文件大小的命令
-				{
-					shell.executeCommands(new String[] {"du -sm *" });
-					cmdResult = shell.getResponse();
-					
-					logger.info(h.getIp()+"文件大小和名称="+cmdResult); 
-					lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
-					
-					List<Host.Database.DataFile> dfList = new ArrayList();
-					db.setDfList(dfList);
-					// 第0行是计算文件大小和列出文件名的命令行    最后一行是提示符行
-					for(int i = 1,size = lines.length-1;i < size;i++){
-						String[] sizeAndName = lines[i].split("[\\s]+");
-						Host.Database.DataFile dataFile = new Host.Database.DataFile();
-						dataFile.setFileSize(sizeAndName[0]);
-						dataFile.setFileName(dataFileDir+"/"+sizeAndName[1]);//不同数据文件路径下可能有同名的文件，显示在页面上会造成困扰，故加上路径名
-						dfList.add(dataFile);
-					}
-				}
-			}
+    		db.setDbName(dbNameList.toString());
+    		db.setDataFileDir(dataFileDirSet.toString());
+    		//db2容器（数据文件）及其大小
+			
 			
 			logger.info(db);
     	}
@@ -1135,6 +1172,43 @@ public class SSHClient {
     	
     }
     
+    private static List<String> collectAllInstanceUserListForDB2(final Shell shell,final Host h){
+    	shell.executeCommands(new String[] { "strings /var/db2/global.reg" });
+		String cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		Matcher db2InstanceUserMatcher  = Pattern.compile("(/\\S+)*/(\\S+?)/sqllib").matcher(cmdResult);
+		
+		List<String> db2AllInstanceUserList = new ArrayList();
+		while(db2InstanceUserMatcher.find()){
+			String userDirectory = db2InstanceUserMatcher.group();
+			logger.info("用户根目录="+userDirectory);
+			//定位到用户根目录，如果可以定位到用户根目录说明  这个实例用户是有效的，可以切换
+			shell.executeCommands(new String[] { "cd "+userDirectory });
+			cmdResult = shell.getResponse();
+			logger.info("定位到用户根目录="+cmdResult);
+	    	String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+			if(lines.length > 2){//说明 无法定位到用户的根目录，即这个用户的根目录是不存在的
+				continue;
+			}
+			db2AllInstanceUserList.add(db2InstanceUserMatcher.group(2));
+		}
+		logger.info("db2实例用户="+db2AllInstanceUserList);
+		return db2AllInstanceUserList;
+    }
+    public static boolean showContainersDetailSuccess(final String cmdResult){
+    	return match("Tablespace\\s+Containers\\s+for\\s+Tablespace",cmdResult);
+    }
+    public static boolean showTablespacesDetailSuccess(final String cmdResult){
+    	return match("Tablespaces\\s+for\\s+Current\\s+Database",cmdResult);
+    }
+    public static boolean connectDatabaseSuccess(final String cmdResult){
+    	return match("Database\\s+Connection\\s+Information",cmdResult);
+    }
+    
+    public static  boolean	match(final String regex,final String string){
+    	return Pattern.compile(regex,Pattern.CASE_INSENSITIVE).matcher(string).find();
+    }
     /**
      * 
      * @param shell
@@ -1143,7 +1217,7 @@ public class SSHClient {
      * @date 2015-1-12下午6:02:51
      * @author HP
      */
-    public static Set<String>	collectDB2RunningUserSet(final Shell shell,final Host h){
+    public static Set<String>	collectRunningInstanceUserSetForDB2(final Shell shell,final Host h){
     	//检测安装有db2数据库，同时也启动了实例的情况，通过下面的命令，可以知道启动了哪些实例
 		shell.executeCommands(new String[] { "ps -ef|grep db2sysc" });
 		String cmdResult = shell.getResponse();
