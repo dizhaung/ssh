@@ -68,7 +68,7 @@
                   <th>是否负载均衡</th>
                   <th>是否双机</th>
                   <th>应用系统个数</th>
-                  <th>数据库个数</th>
+                  <th>数据库</th>
                   	<th>详细信息</th>
                 </tr>
               </thead>
@@ -127,7 +127,8 @@
     			$.post('/ssh/collect',function(data){
     				data = JSON.parse(data);
     				/**
-    				* 从detail 去取属性名为pName的值，若detail为null 返回NONE
+    				* 主机无法的情况下，detail为null 
+    				 	 各要显示的主机详情项单元格显示"未知"
     				*/
     				function detailDot(pName,detail){
     					return detail?detail[pName]:"未知";
@@ -142,7 +143,15 @@
     					}
     					return count;
     				}
-    				 
+    				
+    				function	allDbTypeAndVersionOf(dList){
+    					var typeAndVersion = "";
+    					for(var i = 0,size = dList.length;i<size;i++){
+    						typeAndVersion += dList[i].type+" "+dList[i].version;
+    						if((i+1) < size)		typeAndVersion += ',';//不是最后一数据库		
+    					}
+    					return typeAndVersion;
+    				}
     				if(data.length > 0 ){   //采集之后并且有服务器被采集
     					//显示采集到的服务器列表
     					for(var i = 0;i<data.length;i++){
@@ -161,7 +170,7 @@
         					$('<td></td>').text(detailDot("isLoadBalanced",data[i].detail)).appendTo(tr);//是否负载均衡
         					$('<td></td>').text(detailDot("isCluster",data[i].detail)).appendTo(tr);//是否双机
         					$('<td></td>').text(appCountOf(data[i].mList)).appendTo(tr);//应用系统个数
-        					$('<td></td>').text(data[i].dList.length).appendTo(tr);//数据库个数
+        					$('<td></td>').text(allDbTypeAndVersionOf(data[i].dList)).appendTo(tr);//各个数据库名称及版本
         					
         					
         					$('<td></td>').html('<a target="_blank" href="hostdetail?ip='+data[i].ip+'">详细信息</a>').appendTo(tr);//详细信息

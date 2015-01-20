@@ -43,7 +43,7 @@
 			 		<label class="control-label"  for="command">请在下框输入要批量执行的命令</label>
 			 		<div class="input-group">
 			 			<span class="input-group-addon">></span>
-			 			<input type="text" class="form-control" placeholder="请输入要执行的命令" id="command">
+			 			<input type="text" class="form-control" placeholder="请输入要执行的命令" id="command" readonly>
 			 		</div>
 			 		 
 			 	</div>
@@ -96,6 +96,48 @@
   	 
     </div><!-- 行结束 -->
     
+    <!--  遮罩层和弹出视口 -->
+	
+    <div class="modal" id="modal">
+    	<div class="modal-dialog">
+    		<div class="modal-content">
+    		<div class="modal-header">
+    			<h3 class="">命令行输入</h3>
+    		</div>
+    		<div class="modal-body">
+    		
+    		<input type="text" class="form-control" placeholder="请小心输入命令" id="finalCommandText">
+    		<div class="alert alert-danger alert-dismissable">
+    				<button class="close" data-dismiss="alert" type="button">&times;</button>
+					1：所输入的命令一定要经过手工验证脚本本身的准确和有效性.</br>
+					2：所输入的命令一定要经过手工验证不会对服务器产生破坏.
+				</div>
+    		</div>
+    		<div class="modal-footer">
+    			<button class="btn btn-default" data-dismiss="modal" type="button">取消</button>
+    			<button class="btn btn-primary" data-dismiss="modal" type="button" id="finalCommandBut">确定</button> 
+			 
+    		</div>
+    	</div>
+    	</div>
+    	
+    </div>
+    <div class="modal" id="alertModal">
+    	<div class="modal-dialog">
+    		<div class="modal-content">
+  
+	    		<div class="modal-body">
+	    		  
+	    			<div class="alert alert-danger">请输入合法的命令.</div>
+	    		</div>
+	    		<div class="modal-footer">
+	    			<button class="btn btn-default" data-dismiss="modal" type="button">确定</button>
+	    		 
+	    		</div>
+    		</div>
+    	</div>
+    	
+    </div>
     
     <iframe src="" style="display:none;" id="exportIframe"></iframe>
     <!-- DWR -->
@@ -109,6 +151,7 @@
     <script src="bootstrap/js/bootstrap.min.js"></script>
     <script src="js/json/json_parse.js"></script>
     <script src="js/collecttool.js"></script>
+    <script src="js/alphadiv.js" type="text/javascript"></script>
     <script type="text/javascript">
 	   
     	
@@ -124,10 +167,20 @@
 		}  
     	$(document).ready(function(){
     		
+    		$('#command').click(function(){
+    		
+    			$('#modal').modal({
+    				'keyboard':true
+    			},'toggle');
+    		});
+    		$('#finalCommandBut').click(function(){
+    			$('#command').val($('#finalCommandText').val());
+    		});
     		 //表示允许使用推送技术  
 	        dwr.engine.setActiveReverseAjax(true); 
     		CollectTool.toggleAutoBind('#autoChkbox')
     		$('#collect').click(function(){
+    			
     			
     			var that = this;
     			
@@ -136,9 +189,12 @@
     			tBody.html('');
     			
     			var command = $('#command').val();
+    		
     			//检查输入命令的合法性
     			if(!CollectTool.validate(command)){
-    				alert("请输入合法命令");
+    				$('#alertModal').modal({
+        				'keyboard':true
+        			},'toggle');
     				return;
     			}
     			//单击执行按钮进入采集过程，这个过程中所有按钮不能操作
