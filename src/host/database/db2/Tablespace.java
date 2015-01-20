@@ -1,4 +1,4 @@
-package host.db2;
+package host.database.db2;
 
 import java.util.Collections;
 import java.util.List;

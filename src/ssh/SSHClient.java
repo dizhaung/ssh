@@ -2,16 +2,26 @@ package ssh;
 
 import host.FileManager;
 import host.Host;
+import host.Host.Database;
 import host.Host.Middleware.App;
 import host.HostBase;
 import host.LoadBalancer;
 import host.TinyHost;
 import host.command.CollectCommand;
-import host.db2.Tablespace;
+import host.database.db2.Tablespace;
+import host.middleware.tomcat.Service;
+import host.middleware.tomcat.Service.Connector;
+import host.middleware.tomcat.Service.Engine;
+import host.middleware.tomcat.Service.HttpConnector;
+import host.middleware.tomcat.Service.Engine.Host.Context;
+
+
 
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -27,6 +37,10 @@ import net.sf.json.JSONObject;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.oro.text.regex.MalformedPatternException;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
+import org.dom4j.Element;
 
 import collect.CollectedResource;
 import collect.dwr.DwrPageContext;
@@ -297,16 +311,10 @@ public class SSHClient {
     	
     	
     }
-    /**
-     * 采集linux服务器上的性能数据
-     * @param shell
-     * @param ssh
-     * @param h
-     * @param allLoadBalancerFarmAndServerInfo
-     */
-    private static void collectLinux( Shell shell,final SSHClient ssh,final Host h,final String allLoadBalancerFarmAndServerInfo){
+    
+    
+    private static void collectHostDetailForLinux(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
 
-		
 		
 		Host.HostDetail hostDetail = new Host.HostDetail();
 		h.setDetail(hostDetail);
@@ -432,12 +440,12 @@ public class SSHClient {
 		}
 		hostDetail.setFsList(fsList);
 		
-		
-		//检测是否安装了Oracle数据库
-
-		  
-		shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
-		cmdResult = shell.getResponse();
+    }
+    
+    static void collectOracleForLinux(Shell shell,final Host h){
+    	//检测是否安装了Oracle数据库
+    	shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
+		String cmdResult = shell.getResponse();
 		logger.info(cmdResult);
 		 
 		boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
@@ -509,64 +517,399 @@ public class SSHClient {
 			String version = shell.parseInfoByRegex("((\\d+\\.?)+\\d*)",cmdResult,1);
 			db.setVersion(version);
 			//由于进入了sqlplus模式，在此断开连接，退出重新登录
-			shell.disconnect();
+			shell.executeCommands(new String[] {"exit;"  });
+			cmdResult = shell.getResponse();
+			logger.info(h.getIp()+"	退出SQLPlus	"+cmdResult);
+		}
+		
+		
+    }
+    
+    
+    static  void collectWeblogicForLinux(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+    	//weblogic中间件信息
+		 
+    			shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
+    			String cmdResult = shell.getResponse();
+
+    			logger.info(cmdResult);
+    			 
+    			String[] lines = cmdResult.split("[\r\n]+");
+    			//存在weblogic
+    			if(lines.length>4){
+    				Host.Middleware mw = new Host.Middleware();
+    				h.addMiddleware(mw);
+    				mw.setType("WebLogic");
+    				mw.setIp(h.getIp());
+    				//部署路径
+
+    				logger.info(cmdResult);
+    				logger.info("正则表达式		-Djava.security.policy=(/.+)/server/lib/weblogic.policy");
+    				String deploymentDir = shell.parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
+    				String userProjectsDirSource = cmdResult;
+    				mw.setDeploymentDir(deploymentDir);
+    				//weblogic版本
+    				logger.info("正则表达式		([\\d.]+)$");
+    				mw.setVersion(shell.parseInfoByRegex("([\\d.]+)$",deploymentDir,1));
+    			 
+    				//JDK版本
+    				
+    				shell.executeCommands(new String[] { shell.parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
+    				cmdResult = shell.getResponse();
+    				
+    				logger.info(cmdResult);
+    				logger.info("正则表达式		java\\s+version\\s+\"([\\w.]+)\"");
+    				 
+    				String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
+    				mw.setJdkVersion(jdkVersion);
+    				List<App> appList = searchServiceIpAndPortForEachOf(collectWeblogicAppListForLinux(shell, userProjectsDirSource,h), portListFromLoad);
+    				mw.setAppList(appList);
+    			}
+    		
+    }
+    
+    static void collectTomcatForLinux(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+
+		shell.executeCommands(new String[] { "ps -ef|grep  org.apache.catalina.startup.Bootstrap" });
+		String cmdResult = shell.getResponse();
+		
+		logger.info(h.getIp()+cmdResult);
+		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+		
+		if(lines.length > 3){//安装有Tomcat.
 			
-			// 建立连接
-			try {
-				shell = new Shell(h.getIp(), SSH_PORT, h.getJkUser(), h.getJkUserPassword());
-			} catch (ShellException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			Matcher catalinaHomeMatcher = Pattern.compile("Dcatalina\\.home=(\\S+)").matcher(cmdResult);
+			Set<String> multipulInstanceCatalinaHomeSet = new HashSet();
+			while(catalinaHomeMatcher.find()){
+				String catalinaHome = catalinaHomeMatcher.group(1);
+				multipulInstanceCatalinaHomeSet.add(catalinaHome);
+			}
+			
+			logger.info(h.getIp()+"	可能有多个Tomcat实例同时运行	"+multipulInstanceCatalinaHomeSet);
+			for(String catalinaHome:multipulInstanceCatalinaHomeSet){
+				Host.Middleware mw = new Host.Middleware();
+				h.addMiddleware(mw);
+				h.setIp(h.getIp());
+				//tomcat部署路径
+				mw.setType("Tomcat");
+				String deploymentDir = catalinaHome;
+				mw.setDeploymentDir(deploymentDir);
+				
+				//tomcat版本号
+				shell.executeCommands(new String[] { "cd "+deploymentDir+"/bin","./version.sh" });
+				cmdResult = shell.getResponse();
+				logger.info(h.getIp()+cmdResult);
+				mw.setVersion(shell.parseInfoByRegex("Server\\s+number:\\s*([\\w.]+)", cmdResult, 1)); 
+				
+				//JDK版本
+				String jre_home = shell.parseInfoByRegex("JRE_HOME:\\s*(\\S+)", cmdResult, 1);
+				shell.executeCommands(new String[] { jre_home+"/bin/java -version" });
+				cmdResult = shell.getResponse();
+				
+				logger.info(h.getIp()+cmdResult);
+				mw.setJdkVersion(shell.parseInfoByRegex("\"([\\w.]+)\"", cmdResult, 1));
+				
+				logger.info(mw);
+				//tomcat应用列表
+				;
+				List<App> appList = searchServiceIpAndPortForEachOf(collectAppListForTomcat(shell,deploymentDir,h),portListFromLoad);
+				
+				
+				mw.setAppList(appList);
+				
+			}
+			
+		}
+    }
+    static String reverseTomcatAppPathToAppName(final String path){
+    	if("/".equals(path)){
+    		return "ROOT";
+    	}
+    	return path.replaceAll("^/", "");
+    }
+    static List<App> collectAppListForTomcat(final Shell shell,final String catalinaHome, final Host h){
+    	shell.executeCommands(new String[] { "cat "+catalinaHome+"/conf/server.xml" });
+		String cmdResult = shell.getResponse();
+		
+		logger.info(h.getIp()+"	解析前	"+cmdResult);
+		String serverDotXmlText = parseValidXmlTextFrom(cmdResult);
+		logger.info(h.getIp()+"	解析后	"+serverDotXmlText);
+    	Document serverDotXmlDoc = null;
+		try {
+			serverDotXmlDoc = DocumentHelper.parseText(serverDotXmlText);
+		} catch (DocumentException e) {
+			// TODO Auto-generated catch block
+			
+			e.printStackTrace();
+			logger.info("server.xml文件中内容格式不符合xml规范");
+			return Collections.emptyList();
+		}
+    	Element serverNode = serverDotXmlDoc.getRootElement();
+	
+		List<Element> serviceNodeList = serverNode.elements("Service");
+		Set<Service> serviceSet = new HashSet();
+		for(Element serviceNode:serviceNodeList){
+			Service service = new Service();
+			serviceSet.add(service);
+			service.setName(serviceNode.attributeValue("name"));
+			
+			List<Element> connectorNodeList = serviceNode.elements("Connector");
+			for(Element connectorNode:connectorNodeList){
+				logger.info(connectorNode);
+				String connectorProtocolAttr = connectorNode.attributeValue("protocol");
+				if(Pattern.compile("HTTP",Pattern.CASE_INSENSITIVE).matcher(connectorProtocolAttr).find()){
+					String connectorSslEnabledAttr = connectorNode.attributeValue("SSLEnabled");
+					if(connectorSslEnabledAttr == null){
+						Service.Connector httpConnector = service.new HttpConnector();
+						service.addConnector(httpConnector);
+						httpConnector.setPort(connectorNode.attributeValue("port"));
+						httpConnector.setProtocol(connectorProtocolAttr);
+					}
+				}
+			}
+			
+			List<Element> engineNodeList = serviceNode.elements("Engine");
+			for(Element engineNode:engineNodeList){
+				Service.Engine engine = service.new Engine(); 
+				engine.setDefaultHost(engineNode.attributeValue("defaultHost"));
+				engine.setName(engineNode.attributeValue("name"));
+				service.addEngine(engine);
+				
+				List<Element> hostNodeList = engineNode.elements("Host");
+				for(Element hostNode:hostNodeList){
+					Service.Engine.Host host = engine.new Host();
+					engine.addHost(host);
+					host.setName(hostNode.attributeValue("name"));
+					host.setAppBase(hostNode.attributeValue("appBase"));
+					
+					List<Element> contextNodeList = hostNode.elements("Context");
+					for(Element contextNode:contextNodeList){
+						Service.Engine.Host.Context context = host.new Context();
+						host.addContext(context);
+						context.setPath(reverseTomcatAppPathToAppName(hostNode.attributeValue("path")));
+						context.setDocBase(hostNode.attributeValue("docBase"));
+					}
+					
+				}
+				
+			}
+			
+			
+			
+			
+		}
+		
+		logger.info(serviceSet);
+		/**
+		 * 1Context会在appBase下
+		 * 2在$CATALINA_BASE/conf/[enginename]/[hostname]/appName.xml中
+		 * 3在appName/META-INF/context.xml  中
+		 * 4在server.xml Host元素中
+		 */
+		
+		/**
+		 * 1server.xml Host元素中的Context已经被解析出来,为了便于处理，context path去掉最前面的  / 然后作为appname
+		 * 2查找$CATALINA_BASE/APPBase下的文件夹，作为appName和$CATALINA_BASE/APPBase/appName部署路径
+		 * 3APPBASE路径下，appName/META-INF/context.xml文件会被复制到$CATALINA_BASE/conf/[enginename]/[hostname]/下
+		 * 并被命名为appName.xml文件
+		 * 这样，通过$CATALINA_BASE/conf/[enginename]/[hostname]/下appName.xml解析，矫正appName/META-INF/context.xml的docBase
+		 */
+		
+		for(Iterator<Service> serviceIt = serviceSet.iterator();serviceIt.hasNext(); ){
+			Service service = serviceIt.next();
+			
+			Set<Engine> engineSet = service.getEngineSet();
+			
+			for(Iterator<Engine> engineIt = engineSet.iterator();engineIt.hasNext(); ){
+				Engine engine = engineIt.next();
+				String engineName = engine.getName();
+				Set<host.middleware.tomcat.Service.Engine.Host> hostSet = engine.getHostSet();
+				for(Iterator<host.middleware.tomcat.Service.Engine.Host> hostIt = hostSet.iterator();hostIt.hasNext();){
+					host.middleware.tomcat.Service.Engine.Host  host = hostIt.next();
+					String hostDir = catalinaHome+"/"+host.getAppBase();
+					if(existDirectory(hostDir,shell)){
+						shell.executeCommands(new String[] { "ls --color=never -l|grep ^d" });
+						cmdResult = shell.getResponse();
+						logger.info(cmdResult);
+						String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+						if(lines.length > 2){
+							lines = Arrays.copyOfRange(lines, 1, lines.length-1);
+							
+							for(int i = 0,size = lines.length;i<size;i++){
+								String[] lineFragments = lines[i].split(Regex.CommonRegex.BLANK_DELIMITER.toString());
+								lines[i] = lineFragments[lineFragments.length-1];
+							}
+							String[] appNameArray = lines;
+
+							
+							for(String appName:appNameArray){
+								Context context = host.new Context();
+								host.addContext(context);
+								context.setPath(appName);
+								context.setDocBase(hostDir+"/"+appName);
+							}
+							
+						
+						}
+					}
+					logger.info(host);
+					//校正
+					String hostName = host.getName();
+					String appNameDotXmlDir = catalinaHome+"/conf/"+engineName+"/"+hostName;
+					if(existDirectory(appNameDotXmlDir,shell)){
+						shell.executeCommands(new String[] { "ls --color=never -1" });
+						cmdResult = shell.getResponse();
+						logger.info(h.getIp()+"	目录"+appNameDotXmlDir+"下的xml部署文件	"+cmdResult);
+						String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+						if(lines.length > 2){
+							String[] appNameDotXmlArray = Arrays.copyOfRange(lines, 1, lines.length-1);
+							logger.info(h.getIp()+"	目录"+appNameDotXmlDir+"下的xml部署文件	"+appNameDotXmlArray);
+							
+							for(String appNameDotXml:appNameDotXmlArray){
+								if(!appNameDotXml.endsWith(".xml")) continue;
+								
+								shell.executeCommands(new String[] { "cat "+appNameDotXml });
+								cmdResult = shell.getResponse();
+								logger.info(h.getIp()+"	文件"+appNameDotXml+cmdResult);
+								String contextDotXmlText = parseValidXmlTextFrom(cmdResult);
+								logger.info(h.getIp()+"	格式化后"+contextDotXmlText);
+								Document contextDotXmlDoc = null;
+								try {
+									contextDotXmlDoc = DocumentHelper.parseText(contextDotXmlText);
+								} catch (DocumentException e) {
+									// TODO Auto-generated catch block
+									e.printStackTrace();
+									logger.info(appNameDotXml+"文件中内容格式不符合xml规范");
+									continue;
+								}
+								Element contextNode = contextDotXmlDoc.getRootElement();
+								String appName = appNameDotXml.replaceAll("\\.xml$", "");
+								String docBase = contextNode.attributeValue("docBase");
+								Context context = host.new Context();
+								context.setPath(appName);
+								context.setDocBase(docBase);
+								logger.info(h.getIp()+"	从"+appNameDotXml+"解析出来的	"+context);
+								/**
+								 * 1tomcat默认的manager应用，webapps下的manager目录就是应用的context，这样的情况context.xml文件中可以没有path和docBase
+								 * 2而用户在webapps中部署的应用，假如不是上面的情况，context.xml  存在docBase 且会被当做context
+								 * 3Engine->Host->下appName.xml部署方式，appName.xml中存在docBase
+								 */
+								if(context.getDocBase() != null){
+									host.addContext(context);
+								}
+							}
+							
+						
+						}
+					}
+				}
 			}
 		}
 		
-		
-		//weblogic中间件信息
-		 
-		shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
-		cmdResult = shell.getResponse();
-
-		logger.info(cmdResult);
-		 
-		String[] lines = cmdResult.split("[\r\n]+");
-		//存在weblogic
-		if(lines.length>4){
-			Host.Middleware mw = new Host.Middleware();
-			h.addMiddleware(mw);
-			mw.setType("WebLogic");
-			mw.setIp(h.getIp());
-			//部署路径
-
-			logger.info(cmdResult);
-			logger.info("正则表达式		-Djava.security.policy=(/.+)/server/lib/weblogic.policy");
-			String deploymentDir = shell.parseInfoByRegex("-Djava.security.policy=(/.+)/server/lib/weblogic.policy",cmdResult,1);
-			String userProjectsDirSource = cmdResult;
-			mw.setDeploymentDir(deploymentDir);
-			//weblogic版本
-			logger.info("正则表达式		([\\d.]+)$");
-			mw.setVersion(shell.parseInfoByRegex("([\\d.]+)$",deploymentDir,1));
-		 
-			//JDK版本
+		List<App> appList = new ArrayList();
+		for(Service service:serviceSet){
 			
-			shell.executeCommands(new String[] { shell.parseInfoByRegex("(/.+/bin/java)",cmdResult,1)+" -version" });
-			cmdResult = shell.getResponse();
+			/*Connector[] connectorArray = service.getConnectorSet().toArray(new Connector[0]);
 			
-			logger.info(cmdResult);
-			logger.info("正则表达式		java\\s+version\\s+\"([\\w.]+)\"");
-			 
-			String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
-			mw.setJdkVersion(jdkVersion);
+			StringBuffer connectorPort = new StringBuffer();
 			
-			mw.setAppList(collectWeblogicAppListForLinux(shell, userProjectsDirSource,h));
+			for(int i = 0,size = connectorArray.length;i < size ; i++){
+				connectorPort.append(connectorArray[i].getPort());
+				if((i+1) != size){
+					connectorPort.append(",");
+				}
+			}*/
+			for(Engine engine:service.getEngineSet()){
+				for(host.middleware.tomcat.Service.Engine.Host host:engine.getHostSet()){
+					for(Context context:host.getContextSet()){
+						for(Connector connector:service.getConnectorSet()){
+							App app = new App();
+							String hostName = host.getName();
+							String port = connector.getPort();
+							String appName = context.getPath();
+							app.setAppName(hostName+":"+port+"/"+appName);
+							app.setDir(context.getDocBase());
+							app.setPort(connector.getPort());
+							app.setServiceIp("无");
+							app.setServicePort("无");
+							logger.info(h.getIp()+app);
+						}
+						
+					}
+				}
+			}
 		}
-	
+		
+		return appList;
+    }
+   
+    static boolean existDirectory(final String directory,final Shell shell){
+    	shell.executeCommands(new String[] { "cd "+directory });
+		String cmdResult = shell.getResponse();
+		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+		if(lines.length > 2){
+			return false;
+		}
+		return true;
+    }
+    static String parseValidXmlTextFrom(final String cmdResult){
+    	String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+		String serverDotXml = cmdResult.replaceAll("^"+Pattern.quote(lines[0]), "").replaceAll(Pattern.quote(lines[lines.length-1])+"$", "").trim();
+		return serverDotXml;
     }
     /**
-     * 采集
-     * @param shell
-     * @param ssh
-     * @param h
-     * @param portListFromLoad
+     * 采集linux服务器上的性能数据
+     */
+    private static void collectLinux(final Shell shell,final SSHClient ssh,final Host h,final List<PortLoadConfig> portListFromLoad){
+    	
+    	//collectHostDetailForLinux(shell,h,portListFromLoad);
+    	//collectOracleForLinux(shell,h);
+    	
+    	//collectWeblogicForLinux(shell,h,portListFromLoad);
+    	collectTomcatForLinux(shell,h,portListFromLoad);
+    }
+    
+    static void collectMysqlForLinux(final Shell shell,final Host h){
+    	shell.executeCommands(new String[]{ "ps -ef|grep mysqld" });
+    	String cmdResult = shell.getResponse();
+    	
+    	logger.info(h.getIp()+cmdResult);
+    	
+    	String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+    	
+    	if(lines.length > 3){
+    		List<String> lineWithMysqldList = new ArrayList();
+    		Pattern mysqldProcessPattern = Pattern.compile("mysqld ");
+    		for(String line:lines){
+    			if(mysqldProcessPattern.matcher(line).find())
+    				lineWithMysqldList.add(line);
+    			
+    		}
+    		
+    		for(String lineWithMysqld : lineWithMysqldList){
+    			Database db = new Database();
+    			h.addDatabase(db);
+    			db.setType("MySQL");
+    			db.setIp(h.getIp());
+    			
+    			//数据库部署路径
+    			db.setDeploymentDir(shell.parseInfoByRegex("--basedir=(\\S+)", cmdResult, 1));
+    			
+    			//数据文件保存路径
+    			db.setDataFileDir(shell.parseInfoByRegex("--datadir=(\\S+)", cmdResult, 1));
+    			//版本号
+    			shell.executeCommands(new String[]{"mysql --help|grep Distrib"});
+    			cmdResult = shell.getResponse();
+    			logger.info(h.getIp()+"	版本信息	"+cmdResult);
+    			
+    			db.setVersion(shell.parseInfoByRegex("Distrib\\s*(\\S+),", cmdResult, 1));
+    			
+    			//数据文件及其大小
+    			
+    		}
+    	}
+    }
+    /**
      * @date 2015-1-9下午4:46:27
      * @author HP
      */
@@ -789,9 +1132,6 @@ public class SSHClient {
     }
    /**
     * 
-    * @param allLoadBalancerFarmAndServerInfo
-    * @date 2015-1-9下午4:06:47
-    * @author HP
     */
    public static List<PortLoadConfig> parsePortList(final Host h,final String allLoadBalancerFarmAndServerInfo){
 	   /****************
@@ -921,17 +1261,9 @@ public class SSHClient {
 			String version = shell.parseInfoByRegex(Regex.AixRegex.ORACLE_VERSION,cmdResult,1);
 			db.setVersion(version);
 			//由于进入了sqlplus模式，在此断开连接，退出重新登录
-			shell.disconnect();
-			
-			// 建立连接
-			try {
-				shell = new Shell(h.getIp(), SSH_PORT, h.getJkUser(), h.getJkUserPassword());
-				shell.setTimeout(2*1000);
-			} catch (ShellException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
+			shell.executeCommands(new String[] {"exit;"  });
+			cmdResult = shell.getResponse();
+			logger.info(h.getIp()+"	退出SQLPlus	"+cmdResult);
 		}
 		
 		
@@ -939,9 +1271,6 @@ public class SSHClient {
    	}
    	/**
    	 * 采集weblogic的信息
-   	 * @param shell
-   	 * @param h
-   	 * @param portListFromLoad
    	 * @date 2015-1-9下午4:45:15
    	 * @author HP
    	 */
@@ -985,22 +1314,26 @@ public class SSHClient {
 			String jdkVersion = shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_JDK_VERSION,cmdResult,1);
 			mw.setJdkVersion(jdkVersion);
 			//采集 weblogic的应用列表
-			List<App> appList = collectWeblogicAppListForAIX(shell, userProjectsDirSource,h);
+			List<App> appList = searchServiceIpAndPortForEachOf(collectWeblogicAppListForAIX(shell, userProjectsDirSource,h),portListFromLoad);
 			
-			///主机端口和服务IP 服务端口对应表 中端口和主机APP表中的端口相对
-			for(int i = 0 , size = appList.size();i<size;i++){
-				App app = appList.get(i);
-				for(PortLoadConfig port:portListFromLoad){
-					if(app.getPort().equals(port.getPort())){
-						app.setServiceIp(port.getServiceIp());
-						app.setServicePort(port.getServicePort());
-						break;
-					}
-				}
-			}
+			
 			mw.setAppList(appList);
 			
 		}
+   	}
+   	static List<App>  searchServiceIpAndPortForEachOf(final List<App> appList,final List<PortLoadConfig> portListFromLoad){
+   	///主机端口和服务IP(虚地址)-服务端口（虚端口）-端口对应表（PortLoadConfig）中的端口字段对应
+		for(int i = 0 , size = appList.size();i<size;i++){
+			App app = appList.get(i);
+			for(PortLoadConfig port:portListFromLoad){
+				if(app.getPort().equals(port.getPort())){
+					app.setServiceIp(port.getServiceIp());
+					app.setServicePort(port.getServicePort());
+					break;
+				}
+			}
+		}
+		return appList;
    	}
     /**
      * 采集aix主机信息
@@ -1009,16 +1342,13 @@ public class SSHClient {
      * @param h		
      * @param allLoadBalancerFarmAndServerInfo  所有的负载均衡的配置文件信息
      */
-    private static void collectAIX(Shell shell,final SSHClient ssh,final Host h,final String allLoadBalancerFarmAndServerInfo){
-    	List<PortLoadConfig> portListFromLoad  =   parsePortList(h, allLoadBalancerFarmAndServerInfo);
-		collectHostDetailForAIX(shell, ssh, h, portListFromLoad); 
+    private static void collectAIX(Shell shell,final SSHClient ssh,final Host h,final List<PortLoadConfig> portListFromLoad){
+     	collectHostDetailForAIX(shell, ssh, h, portListFromLoad); 
 		collectOracleForAIX(shell, h);
 		collectWeblogicForAIX(shell, h, portListFromLoad);
 		collectDB2ForAix(shell,h);
-		/*****************
-		 * webshpere  中间件
-		 ******************/
 		
+		collectWebSphereForAIX(shell, h, portListFromLoad);
 		
     }
     
@@ -1626,10 +1956,11 @@ public class SSHClient {
 			    			
 			    			collectOs(shell,h);
 			    			
+			    			List<PortLoadConfig> portListFromLoad  =   parsePortList(h, allLoadBalancerFarmAndServerInfo.toString());
 			    			if("AIX".equalsIgnoreCase(h.getOs())){
-			    				collectAIX(shell,ssh,h,allLoadBalancerFarmAndServerInfo.toString());
+			    				collectAIX(shell,ssh,h,portListFromLoad);
 			    			}else if("LINUX".equalsIgnoreCase(h.getOs())){
-			    				collectLinux(shell,ssh,h,allLoadBalancerFarmAndServerInfo.toString());
+			    				collectLinux(shell,ssh,h,portListFromLoad);
 			    			}else if("HP-UNIX".equalsIgnoreCase(h.getOs())){
 			    				
 			    			}
@@ -1772,8 +2103,8 @@ public class SSHClient {
 							app.setAppName(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_10_APP_NAME,cmdResult,1)); 
 							app.setDir(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_10_APP_DIR,cmdResult,1));
 							app.setPort(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_10_APP_PORT,cmdResult,1));
-							app.setServiceIp("NONE");
-							app.setServicePort("NONE");
+							app.setServiceIp("无");
+							app.setServicePort("无");
 							
 							appList.add(app);
 							logger.info(h.getIp()+app);
@@ -1796,8 +2127,8 @@ public class SSHClient {
 							app.setAppName(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_8_APP_NAME,cmdResult,1)); 
 							app.setDir(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_8_APP_DIR,cmdResult,1));
 							app.setPort(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_8_APP_PORT,cmdResult,1));
-							app.setServiceIp("NONE");
-							app.setServicePort("NONE");
+							app.setServiceIp("无");
+							app.setServicePort("无");
 							
 							appList.add(app);
 							logger.info(h.getIp()+app);
@@ -1885,6 +2216,9 @@ public class SSHClient {
 							///匹配应用的名字<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
 							app.setAppName(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<name>(.*)</name>[\\s\\S]*?</app-deployment>",cmdResult,1)); 
 							app.setDir(shell.parseInfoByRegex("<app-deployment>[\\s\\S]*?<source-path>(.*)</source-path>[\\s\\S]*?</app-deployment>",cmdResult,1));
+							app.setPort(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_10_APP_PORT,cmdResult,1));
+							app.setServiceIp("无");
+							app.setServicePort("无");
 							appList.add(app);
 							logger.info(h.getIp()+app);
 						}
@@ -1908,6 +2242,9 @@ public class SSHClient {
 							///匹配应用的名字<[Aa]pplication[\s\S]+?[Nn]ame="([\S]+)"  有优化空间，或者可以使用dom4j建立xml文件的DOM结构
 							app.setAppName(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Nn]ame=\"([\\S]+)\"",cmdResult,1)); 
 							app.setDir(shell.parseInfoByRegex("<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"",cmdResult,1));
+							app.setPort(shell.parseInfoByRegex(Regex.AixRegex.WEBLOGIC_8_APP_PORT,cmdResult,1));
+							app.setServiceIp("无");
+							app.setServicePort("无");
 							appList.add(app);
 							logger.info(h.getIp()+app);
 						}
