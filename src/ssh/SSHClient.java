@@ -3,6 +3,7 @@ package ssh;
 import host.FileManager;
 import host.Host;
 import host.Host.Database;
+import host.Host.Database.DataFile;
 import host.Host.Middleware.App;
 import host.HostBase;
 import host.LoadBalancer;
@@ -21,6 +22,7 @@ import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,6 +43,8 @@ import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+
+import ssh.collect.AixCollector;
 
 import collect.CollectedResource;
 import collect.dwr.DwrPageContext;
@@ -73,17 +77,17 @@ public class SSHClient {
     private static final String ENTER_CHARACTER = "\r";
     private static final int SSH_PORT = 22;
     private List<String> lstCmds = new ArrayList<String>();
-    public static final String[] LINUX_PROMPT_REGEX_TEMPLATE = new String[] { "~]#", "~#", "#",
+    public static final String[] COMMAND_LINE_PROMPT_REGEX_TEMPLATE = new String[] { "~]#", "~#", "#",
         ":~#", "/$", ">","\\$","SQL>"};//加入\\$匹配登录后命令提示符为\$的情况
-    private String[] linuxPromptRegex = null;
+    private String[] commandLinePromptRegex = null;
     private Expect4j expect = null;
     private StringBuilder buffer = null;
     private String userName;
     private String password;
     private String host;
  
-    public void setLinuxPromptRegex(String[] linuxPromptRegex){
-    	this.linuxPromptRegex = linuxPromptRegex;
+    public void setCommandLinePromptRegex(String[] commandLinePromptRegex){
+    	this.commandLinePromptRegex = commandLinePromptRegex;
     }
     /**
      *
@@ -104,8 +108,8 @@ public class SSHClient {
     */
     public String execute(List<String> cmdsToExecute) throws ShellException {
     	//没有特别的正则   则使用匹配命令提示的标准正则
-    	if(linuxPromptRegex == null){
-    		linuxPromptRegex = LINUX_PROMPT_REGEX_TEMPLATE;
+    	if(commandLinePromptRegex == null){
+    		commandLinePromptRegex = COMMAND_LINE_PROMPT_REGEX_TEMPLATE;
     	}
         this.lstCmds = cmdsToExecute;
        
@@ -116,7 +120,7 @@ public class SSHClient {
             }
         };
         List<Match> lstPattern =  new ArrayList<Match>();
-        for (String regexElement : linuxPromptRegex) {
+        for (String regexElement : commandLinePromptRegex) {
             try {
                 Match mat = new RegExpMatch(regexElement, closure);
                 lstPattern.add(mat);
@@ -156,7 +160,7 @@ public class SSHClient {
 			throw new ShellException(e.toString(),e);
 		} finally {
         	//去掉特殊正则，默认回归标准的提示符匹配的正则
-        	linuxPromptRegex = null;
+			commandLinePromptRegex = null;
         	this.disconnect();
         }
         return buffer.toString();
@@ -862,14 +866,15 @@ public class SSHClient {
      */
     private static void collectLinux(final Shell shell,final SSHClient ssh,final Host h,final List<PortLoadConfig> portListFromLoad){
     	
-    	//collectHostDetailForLinux(shell,h,portListFromLoad);
-    	//collectOracleForLinux(shell,h);
+    	collectHostDetailForLinux(shell,h,portListFromLoad);
+    	collectOracleForLinux(shell,h);
     	
-    	//collectWeblogicForLinux(shell,h,portListFromLoad);
+    	collectWeblogicForLinux(shell,h,portListFromLoad);
     	collectTomcatForLinux(shell,h,portListFromLoad);
     }
     
     static void collectMysqlForLinux(final Shell shell,final Host h){
+    	grantRoot(shell,h);
     	shell.executeCommands(new String[]{ "ps -ef|grep mysqld" });
     	String cmdResult = shell.getResponse();
     	
@@ -880,6 +885,7 @@ public class SSHClient {
     	if(lines.length > 3){
     		List<String> lineWithMysqldList = new ArrayList();
     		Pattern mysqldProcessPattern = Pattern.compile("mysqld ");
+    		//可能启动多个mysql数据库实例，一个实例是一个mysqld进程
     		for(String line:lines){
     			if(mysqldProcessPattern.matcher(line).find())
     				lineWithMysqldList.add(line);
@@ -896,7 +902,8 @@ public class SSHClient {
     			db.setDeploymentDir(shell.parseInfoByRegex("--basedir=(\\S+)", cmdResult, 1));
     			
     			//数据文件保存路径
-    			db.setDataFileDir(shell.parseInfoByRegex("--datadir=(\\S+)", cmdResult, 1));
+    			String dataDir = shell.parseInfoByRegex("--datadir=(\\S+)", cmdResult, 1);
+    			db.setDataFileDir(dataDir);
     			//版本号
     			shell.executeCommands(new String[]{"mysql --help|grep Distrib"});
     			cmdResult = shell.getResponse();
@@ -906,6 +913,50 @@ public class SSHClient {
     			
     			//数据文件及其大小
     			
+    			if(existDirectory(dataDir,shell)){
+    				shell.executeCommands(new String[]{"ls --color=never -l|grep ^d"});
+        			cmdResult = shell.getResponse();
+        			logger.info(h.getIp()+"	数据库信息	"+cmdResult);
+        			
+        			lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+        			if(lines.length > 2){
+        				//列出各数据库目录的名字和ibdata\w*(innodb引擎共享数据库表空间)，待下一步从获取此文件夹内所有目录和文件的列表中提取这些符合规定的文件大小
+        				Set<String> dataFileNameSet = new HashSet();
+        				for(int i = 1,size = lines.length-1;i < size;i++){
+        					dataFileNameSet.add(shell.parseInfoByRegex("(\\S+)$", lines[i], 1));
+        				}
+        				dataFileNameSet.add("ibdata\\w*");
+            			shell.executeCommands(new String[]{"du -sm *"});
+            			cmdResult = shell.getResponse();
+            			
+            			logger.info(h.getIp()+"	数据库大小	"+cmdResult);
+            			
+            			//把数据文件夹内所有目录和文件的大小都列出来，然后再从中找出各数据库目录和ibdata\w*的大小
+            			lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+            			
+            			List<DataFile> dataFileList = new ArrayList();
+            			for(int i = 1,size = lines.length-1;i < size;i++){
+            				String[] sizeAndName = lines[i].split(Regex.CommonRegex.BLANK_DELIMITER.toString());
+            				String fileOrDirSize = sizeAndName[0];
+            				String fileOrDirName = sizeAndName[1];
+            				for(String dataFileName : dataFileNameSet){
+            					if(fileOrDirName.matches(dataFileName)){
+            						DataFile dataFile = new DataFile();
+            						dataFile.setFileName(fileOrDirName);
+            						dataFile.setFileSize(fileOrDirSize);
+            			
+            						dataFileList.add(dataFile);
+            						
+            					}
+            				}
+            			}
+            			
+            			logger.info(h.getIp()+"	数据文件列表	"+dataFileList);
+            			db.setDfList(dataFileList);
+        			}
+        			
+    			}
+    			logger.info(h.getIp()+"	mysql数据库	"+db);
     		}
     	}
     }
@@ -959,7 +1010,7 @@ public class SSHClient {
 		//获取内存大小
 		List<String> cmdsToExecute = new ArrayList<String>();
 		
-		ssh.setLinuxPromptRegex(ssh.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"Full Core"}));
+		ssh.setCommandLinePromptRegex(ssh.getPromptRegexArrayByTemplateAndSpecificRegex(COMMAND_LINE_PROMPT_REGEX_TEMPLATE,new String[]{"Full Core"}));
 		
 		cmdsToExecute.add("prtconf");
 		
@@ -1368,32 +1419,38 @@ public class SSHClient {
     		Host.Database db = new Host.Database();
 			h.addDatabase(db);
 			db.setType("DB2");
-			List<String> db2AllInstanceUserList = collectAllInstanceUserListForDB2( shell,  h);
+			List<String> db2InstanceUserListOfAllInstance = collectAllInstanceUserListForDB2( shell,  h);
     		//取每个实例用户所对应实例的数据库
     		boolean isNotCollectVersion = true;
     		
-    		List<String> dbNameList = new ArrayList();
+    		List<String> dbNameListOfAllInstance = new ArrayList();
     		final Set<String> dataFileDirSet = new HashSet();
 			List<Host.Database.DataFile> dfList = new ArrayList();//所有实例下所有数据库的容器集合
 			db.setDfList(dfList);
 			
-    		for(String userName:db2AllInstanceUserList){
+    		for(String instanceUser:db2InstanceUserListOfAllInstance){
 
     			grantRoot(shell,h);
     			
     			///切换到运行实例的DB2用户
-    			shell.executeCommands(new String[] { "su - "+userName });
+    			shell.executeCommands(new String[] { "su - "+instanceUser });
+    			cmdResult = shell.getResponse();
+    			
+    			logger.info(h.getIp()+"	切换到"+instanceUser+"用户	"+cmdResult);
+    			
     			//多个用户的话db2安装路径和版本只在第一个用户登录的情况下采集一次
     			if(isNotCollectVersion){
     				///db2安装路径
         			shell.executeCommands(new String[] { "db2level" });
         			cmdResult = shell.getResponse();
         			
-        			logger.info("db2安装路径="+cmdResult);
-        			db.setDeploymentDir(shell.parseInfoByRegex("Product is installed at \"([\\s\\S]+?)\"", cmdResult, 1));
+        			logger.info(h.getIp()+cmdResult);
+        			logger.info(h.getIp()+"	db2安装路径="+shell.parseInfoByRegex("Product is installed at \"(\\S+?)\"", cmdResult, 1));
+        			db.setDeploymentDir(shell.parseInfoByRegex("Product is installed at \"(\\S+?)\"", cmdResult, 1));
         			
         			//db2版本
-        			db.setVersion(shell.parseInfoByRegex("Informational tokens are \"([\\s\\S]+?)\"", cmdResult, 1));
+        			logger.info(h.getIp()+"	db2版本	"+shell.parseInfoByRegex("Informational tokens are \"DB2 (\\S+?)\"", cmdResult, 1));
+        			db.setVersion(shell.parseInfoByRegex("Informational tokens are \"DB2 (\\S+?)\"", cmdResult, 1));
         			
         			isNotCollectVersion = !isNotCollectVersion;
     			}
@@ -1408,7 +1465,7 @@ public class SSHClient {
     			while(dbNameMatcher.find()){
     				dbNameListForCurrentInstance.add(dbNameMatcher.group(1));
     			}
-    			dbNameList.addAll(dbNameListForCurrentInstance);
+    			dbNameListOfAllInstance.addAll(dbNameListForCurrentInstance);
     			//数据文件路径 (多个数据库可能对应一个数据文件路径) 
     			Matcher  dataFileDirMatcher = Pattern.compile("Local database directory\\s*?=\\s*([\\s\\S]*?)\\s").matcher(cmdResult);
     			final Set<String> dataFileDirSetForCurrentInstance = new HashSet();
@@ -1491,7 +1548,7 @@ public class SSHClient {
     			
     			
         	}
-    		db.setDbName(dbNameList.toString());
+    		db.setDbName(dbNameListOfAllInstance.toString());
     		db.setDataFileDir(dataFileDirSet.toString());
     		//db2容器（数据文件）及其大小
 			
@@ -1594,11 +1651,18 @@ public class SSHClient {
 			mw.setType("WebSphere");
 			mw.setIp(h.getIp());
 			//webSphere安装路径
-			String  deploymentDir = shell.parseInfoByRegex(Pattern.quote("-Dwas.install.root=")+"([\\s\\S]+?)\\s",cmdResult,1);
+			String  deploymentDir = shell.parseInfoByRegex(Pattern.quote("-Dwas.install.root=")+"([\\S]+)",cmdResult,1);
 			mw.setDeploymentDir(deploymentDir);
 			
-			//webSphere应用部署路径
-			
+			//webSphere应用部署路径,考虑到集群的情况，DM的user.intall.root与node不一致
+			Set<String> userInstallRootSet = new HashSet();
+			for(int i = 1,size = lines.length -1 ;i < size; i++){
+				if(isNotDeploymentManager(lines[i],"dmgr$")){
+					String userIntallRoot = shell.parseInfoByRegex(Pattern.quote("-Duser.install.root=")+"([\\S]+)",cmdResult,1);
+					userInstallRootSet.add(userIntallRoot);
+				}
+			}
+			logger.info(h.getIp()+"	用户根目录	"+userInstallRootSet);
 			//webSphere  JDK版本
 			shell.executeCommands(new String[] { deploymentDir+"/java/bin/java -version" });
 			cmdResult = shell.getResponse();
@@ -1613,8 +1677,230 @@ public class SSHClient {
 			mw.setVersion(shell.parseInfoByRegex("Version\\s+([\\d.]+)",cmdResult,1));
 			logger.info(h.getIp()+cmdResult);
 			
+			//websphere应用列表
+			List<App> appList = new ArrayList();
+			for(String userIntallRoot : userInstallRootSet){
+				appList.addAll(searchServiceIpAndPortForEachOf(collectAppListForWebsphere(shell,userIntallRoot,h),portListFromLoad));
+				
+			}
+			mw.setAppList(appList);
 			logger.info(mw);
 		}
+    }
+    private static boolean isNotDeploymentManager(final String line,final String regex){
+    	return !match(line,regex);
+    }
+    static List<App> collectAppListForWebsphere(final Shell shell,String userInstallRoot,final Host h){
+    	grantRoot(shell,h);
+    	String   installedAppsDir = userInstallRoot+"/installedApps/";
+    	List<App> appListOfAllCell = new ArrayList();
+    	if(existDirectory(installedAppsDir,shell)){
+    		shell.executeCommands(new String[] { "ls -l|grep ^d"});
+    		String  cmdResult = shell.getResponse(); 
+    		
+    		
+    		logger.info(h.getIp()+"	installedApps下的cell文件夹		"+cmdResult);
+			Set<String> cellDirSetOnInstalledAppsDir = parseDirectoryNameSetFromDirDetail(cmdResult,shell);
+			
+			if(!cellDirSetOnInstalledAppsDir.isEmpty()){
+				/**
+				 * 本机节点node可以属于多个cell(管理域)
+				 * 每个cell中安装的程序可能是多个node集群的应用
+				 */
+				Map<String,Set<String>> cellPathAndAppNameDirSetMap = new HashMap();
+				for(String cellDirOnInstalledAppsDir : cellDirSetOnInstalledAppsDir){
+					String cellPathOnInstalledAppsDir = installedAppsDir+cellDirOnInstalledAppsDir;
+					shell.executeCommands(new String[] { "ls -l "+cellPathOnInstalledAppsDir});
+		    		cmdResult = shell.getResponse();
+		    		
+		    		Set<String> appNameDirSet = parseDirectoryNameSetFromDirDetail(cmdResult,shell);
+		    		
+		    		cellPathAndAppNameDirSetMap.put(cellPathOnInstalledAppsDir, appNameDirSet);
+				}
+				logger.info(h.getIp()+"	各个cell下的app	"+cellPathAndAppNameDirSetMap);
+				//
+				String cellsPathOnConfigDir = userInstallRoot+"/config/cells/";
+				 
+				shell.executeCommands(new String[] { "ls -l "+cellsPathOnConfigDir + " |grep ^d"});
+	    		cmdResult = shell.getResponse();
+	    		
+	    		logger.info(h.getIp()+"	config目录下的cell	"+cmdResult);
+	    		Set<String> cellDirSetOnCellsDir = parseDirectoryNameSetFromDirDetail(cmdResult,shell);
+	    		logger.info(h.getIp()+"	config目录下的cell	"+cellDirSetOnCellsDir);
+	    		/**
+	    		 * serverindex.xml中应用和端口
+	    		 * 在某个cell下本机node所安装的应用
+	    		 */
+	    		Map<String,List<App>> cellDirAndAppListMap = new HashMap();
+	    		for(String cellDirOnCellsDir : cellDirSetOnCellsDir){
+	    			
+	    			String nodesPathOnCellDir = cellsPathOnConfigDir+cellDirOnCellsDir+"/nodes/";
+	    			shell.executeCommands(new String[] { "ls -l "+nodesPathOnCellDir+" |grep ^d"});
+		    		cmdResult = shell.getResponse();
+		    		
+		    		logger.info(h.getIp()+"	nodes目录下的node	"+cmdResult);
+	    			Set<String> nodeDirSetOnNodesDir = parseDirectoryNameSetFromDirDetail(cmdResult,shell);
+	    			logger.info(h.getIp()+"	nodes目录下的node	"+nodeDirSetOnNodesDir);
+	    			List<App> appListOfCellDir = new ArrayList();
+	    			
+	    			cellDirAndAppListMap.put(cellDirOnCellsDir, appListOfCellDir);
+	    			for(String nodeDirOnNodesDir : nodeDirSetOnNodesDir){
+	    				String nodePathOnNodesDir = nodesPathOnCellDir+nodeDirOnNodesDir+"/";
+	    				
+	    	    		logger.info(h.getIp()+" serverindex.xml路径	"+nodePathOnNodesDir);
+	    	    		if(existFileOnPath(nodePathOnNodesDir,"serverindex.xml",shell)){
+	    	    			/***
+	    	    			 * 默认情况下，node名称为hostnameNodexx(xx为01,02的规则)，但是node名称可自定义
+	    	    			 * 故采用serverindex.xml取得hostName
+	    	    			 * 与主机名想匹配的方式
+	    	    			 */
+		    				shell.executeCommands(new String[] { "cat "+nodePathOnNodesDir+"serverindex.xml"});
+		    	    		cmdResult = shell.getResponse();
+		    	    		
+		    	    		logger.info(h.getIp()+"	各个node目录下的serverindex.xml文件内容	"+cmdResult);
+		    	    		String serverIndexDotXmlText = parseValidXmlTextFrom(cmdResult);
+		    	    		logger.info(h.getIp()+"	格式化之后的serverindex.xml内容	"+serverIndexDotXmlText);
+		    	    		Document serverIndexDoc = null;
+		    	    		try {
+		    	    			serverIndexDoc = DocumentHelper.parseText(serverIndexDotXmlText);
+							} catch (DocumentException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+								logger.info("xml文本串不合法");
+								continue;
+							}
+		    	    		
+		    	    		/**
+		    	    		 * 1找出serverType为APPLICATION_SERVER的serverEntries，内部子元素
+		    	    		 * <deployedApplications>IDSWebApp_war.ear/deployments/IDSWebApp_war</deployedApplications>
+		    	    		 * IDSWebApp_war.ear就是部署的应用
+		    	    		 * 
+		    	    		 * 2serverEntries元素内部，它的endPointName属性为WC_defaulthost的子元素specialEndpoints是访问端口元素
+		    	    		 * 然后 取specialEndpoints它的endPoint子元素
+		    	    		 * 			其port属性就是端口，元素结构如下
+		    	    		 * <specialEndpoints xmi:id="NamedEndPoint_1227522882663" endPointName="WC_defaulthost"> 
+										<endPoint xmi:id="EndPoint_1227522882663" host="*" port="9080"/> 
+							   </specialEndpoints> 
+		    	    		 */
+		    	    		Element serverIndexNode = serverIndexDoc.getRootElement();
+		    	    		String hostNameAttValue = serverIndexNode.attributeValue("hostName");
+		    	    		
+		    	    		logger.info(h.getIp()+"	serverindex.xml中主机名	"+hostNameAttValue);
+		    	    		
+		    	    		
+		    	    		String hostName = AixCollector.collectHostNameForAIX(shell, h);//Junit单元测试和正式部署都可以使用这种方式，可选的方法可以通过h.getDetail().getHostName()得到主机名
+		    	    		if(hostNameAttValue.equalsIgnoreCase(hostName)){
+		    	    			
+		    	    			List<Element> serverEntriesNodeList = serverIndexNode.elements("serverEntries");
+			    	    		logger.info(h.getIp()+serverEntriesNodeList);
+			    	    		for(Element serverEntriesNode : serverEntriesNodeList){
+			    	    			//取application
+			    	    			String serverTypeAttValue = serverEntriesNode.attributeValue("serverType");
+			    	    			if("APPLICATION_SERVER".equalsIgnoreCase(serverTypeAttValue)){
+			    	    				List<Element>  deployedApplicationsNodeList = serverEntriesNode.elements("deployedApplications");
+			    	    				if(!deployedApplicationsNodeList.isEmpty()){
+
+				    	    				//取访问port
+					    	    			List<Element> specialEndpointsNodeList = serverEntriesNode.elements("specialEndpoints");
+					    	    			String port = "";
+					    	    			for(Element specialEndpointsNode  : specialEndpointsNodeList){
+					    	    				String endPointNameAttValue =  specialEndpointsNode.attributeValue("endPointName");
+					    	    				if("WC_defaulthost".equalsIgnoreCase(endPointNameAttValue)){
+					    	    					Element endPointNode = specialEndpointsNode.element("endPoint");
+					    	    					String portAttValue = endPointNode.attributeValue("port");
+					    	    					port = portAttValue;
+					    	    					logger.info(h.getIp()+"	 serverindex.xml中解析到的port	"+port);
+					    	    					break;
+					    	    				}
+					    	    			}
+			    	    					for(Element deployedApplicationsNode : deployedApplicationsNodeList){
+				    	    					String deployedApplicationsText = deployedApplicationsNode.getTextTrim();
+				    	    					String applicationName = shell.parseInfoByRegex("[^/]+", deployedApplicationsText, 0);
+				    	    					logger.info(h.getIp()+"	 serverindex.xml中解析到的appName	"+applicationName);
+				    	    					App app = new App();
+				    	    					appListOfCellDir.add(app);
+				    	    					app.setAppName(applicationName);
+				    	    					app.setPort(port);
+				    	    					app.setDir(deployedApplicationsText);
+				    	    					app.setServiceIp("无");
+				    	    					app.setServicePort("无");
+				    	    					logger.info(h.getIp()+"	 serverindex.xml中解析到的app	"+app);
+				    	    				}
+				    	    				
+			    	    				}
+			    	    				
+			    	    			}
+			    	    			
+			    	    			
+			    	    		}
+		    	    		}
+		    	    		
+	    	    		}
+	    	    		
+	    			}
+	    		}
+	    		
+	    		/**
+	    		 * 拼凑出部署应用的完整的路径名，一部分来自serverindex.xml文件,另一部分来自installedApps目录
+	    		 */
+	    		Set<String> cellPathSet = cellPathAndAppNameDirSetMap.keySet();
+	    		Set<String> cellDirSet = cellDirAndAppListMap.keySet();
+	    		for(String cellDir : cellDirSet){
+    				Pattern cellDirPattern = Pattern.compile(Pattern.quote(cellDir)+"$");
+    				for(String cellPath  : cellPathSet){
+    	    			
+    	    			Matcher cellDirMatcher = cellDirPattern.matcher(cellPath);
+    	    			if(cellDirMatcher.find()){
+    	    				Set<String> appNameDirSet  = cellPathAndAppNameDirSetMap.get(cellPath);//installedApps下
+    	    				List<App> appListOfCellDir = cellDirAndAppListMap.get(cellDir);//config下
+    	    				for(Iterator<App> it = appListOfCellDir.iterator();it.hasNext();){
+    	    					App app = it.next();
+    	    					for(String appNameDir : appNameDirSet){
+    	    						if(appNameDir.equalsIgnoreCase(app.getAppName())){
+    	    							String appFullPath = cellPath + "/" +app.getDir();
+    	    							app.setDir(appFullPath);
+    	    							logger.info(h.getIp()+"	 app的完整安装路径名	"+appFullPath);
+    	    						}
+    	    					}
+    	    				}
+    	    			}
+    	    		}
+    			}
+	    		
+	    		//所有cell下的app
+	    		Collection<List<App>> appListCollectionOfAllCell = cellDirAndAppListMap.values();
+	    		for(List<App> appListOfAnyCell : appListCollectionOfAllCell){
+	    			appListOfAllCell.addAll(appListOfAnyCell);
+	    		}
+			}
+			
+    	
+    	}
+    	logger.info(h.getIp()+"	 应用	"+appListOfAllCell);
+    	return appListOfAllCell;
+    }
+    static boolean existFileOnPath(final String path,final String fileName,final Shell shell){
+    	shell.executeCommands(new String[] { "ls "+path+" |grep "+fileName});
+		String cmdResult = shell.getResponse();
+		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+		if(lines.length > 2){
+			logger.info("在"+path+"文件夹下存在文件"+fileName+"文件");
+			return true;
+		}
+		return false;
+    }
+    static   Set<String> parseDirectoryNameSetFromDirDetail(final String cmdResult,final Shell shell){
+    	
+    	Set<String> dirNameSet = new HashSet<String>();
+    	String[] dirDetailInfoArray = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+    	if(dirDetailInfoArray.length > 2){
+    		for(int i = 1,size = dirDetailInfoArray.length -1;i < size;i++){
+        		dirNameSet.add(shell.parseInfoByRegex("(\\S+)$", dirDetailInfoArray[i], 1));
+    		}
+    	}
+    	
+    	
+    	return dirNameSet;
     }
     /**
      * 提升为root权限
@@ -1622,21 +1908,28 @@ public class SSHClient {
      * @param h
      */
     private static void grantRoot(final Shell shell,final HostBase h){
-    	logger.info(h.getIp()+"提高用户权限");
+    	logger.info(h.getIp()+"	root用户登录");
     	//当需要特别权限的情况下使用root用户
 		String rootUser = h.getRootUser();
 		String rootUserPassword = h.getRootUserPassword();
     	//切换到root用户 ，提升权限
+		shell.setCommandLinePromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(COMMAND_LINE_PROMPT_REGEX_TEMPLATE,new String[]{"Password:"}));
+		
 		shell.executeCommands(new String[] { "su -" });
 		String cmdResult = shell.getResponse();
 		
 		logger.info(h.getIp()+cmdResult);
 		///模拟输入root密码
-		shell.setLinuxPromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"Password:"}));
 		shell.executeCommands(new String[] { rootUserPassword });
 		cmdResult = shell.getResponse();
-			
+		
 		logger.info(h.getIp()+cmdResult);
+		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+		logger.info(lines.length);
+		if(lines.length >2){
+			logger.info(h.getIp()+"	root用户登录错误	可能是root用户密码"+rootUserPassword+"不正确");
+		}
+		
     }
     /**
      * 采集操作系统的类型   AIX  Linux
@@ -1680,23 +1973,23 @@ public class SSHClient {
 					@Override
 					public void run() {
 						// TODO Auto-generated method stub
-						Shell sshLoadBalancer = null;
+						Shell shell = null;
 						try {
 							logger.info("------"+lb.getIp()+"开始采集------");
 							
-							sshLoadBalancer = new Shell(lb.getIp(), SSH_PORT,lb.getUserName(), lb.getPassword());
-							sshLoadBalancer.setTimeout(10*1000);
+							shell = new Shell(lb.getIp(), SSH_PORT,lb.getUserName(), lb.getPassword());
+							shell.setTimeout(10*1000);
 							
-							sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
+							shell.setCommandLinePromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(shell.COMMAND_LINE_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
 							
 							List<String> cmdsToExecute = new ArrayList<String>();
 							
 							String cmdResult;
-							sshLoadBalancer.executeCommands(new String[]{"system config immediate"});
-							cmdResult = sshLoadBalancer.getResponse();
+							shell.executeCommands(new String[]{"system config immediate"});
+							cmdResult = shell.getResponse();
 							logger.info(lb.getIp()+"======="+cmdResult);
 					
-							sshLoadBalancer.disconnect();
+							shell.disconnect();
 							
 							
 							synchronized(allLoadBalancerFarmAndServerInfo){
