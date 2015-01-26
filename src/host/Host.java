@@ -737,7 +737,22 @@ public class Host extends HostBase{
 				this.dir = dir;
 			}
 			
-			 
+			
+			@Override
+			public int hashCode() {
+				final int prime = 31;
+				int result = 1;
+				result = prime * result
+						+ ((appName == null) ? 0 : appName.hashCode());
+				result = prime * result + ((dir == null) ? 0 : dir.hashCode());
+				result = prime * result
+						+ ((port == null) ? 0 : port.hashCode());
+				result = prime * result
+						+ ((serviceIp == null) ? 0 : serviceIp.hashCode());
+				result = prime * result
+						+ ((servicePort == null) ? 0 : servicePort.hashCode());
+				return result;
+			}
 			@Override
 			public boolean equals(Object obj) {
 				if (this == obj)
@@ -747,16 +762,38 @@ public class Host extends HostBase{
 				if (getClass() != obj.getClass())
 					return false;
 				App other = (App) obj;
+				if (appName == null) {
+					if (other.appName != null)
+						return false;
+				} else if (!appName.equals(other.appName))
+					return false;
+				if (dir == null) {
+					if (other.dir != null)
+						return false;
+				} else if (!dir.equals(other.dir))
+					return false;
 				if (port == null) {
 					if (other.port != null)
 						return false;
 				} else if (!port.equals(other.port))
 					return false;
+				if (serviceIp == null) {
+					if (other.serviceIp != null)
+						return false;
+				} else if (!serviceIp.equals(other.serviceIp))
+					return false;
+				if (servicePort == null) {
+					if (other.servicePort != null)
+						return false;
+				} else if (!servicePort.equals(other.servicePort))
+					return false;
 				return true;
 			}
 			@Override
 			public String toString() {
-				return "App [appName=" + appName + ", dir=" + dir + "]";
+				return "App [appName=" + appName + ", dir=" + dir + ", port="
+						+ port + ", serviceIp=" + serviceIp + ", servicePort="
+						+ servicePort + "]";
 			}
 			
 			
