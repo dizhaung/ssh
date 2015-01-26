@@ -155,8 +155,8 @@ public class Shell {
         }
         
         //没有特别的正则   则使用匹配命令提示的标准正则
-    	if(linuxPromptRegex == null){
-    		linuxPromptRegex = LINUX_PROMPT_REGEX_TEMPLATE;
+    	if(commandLinePromptRegex == null){
+    		commandLinePromptRegex = COMMAND_LINE_PROMPT_REGEX_TEMPLATE;
     	}
         logger.debug("----------Running commands are listed as follows:----------");
         for(String command:commands){
@@ -173,9 +173,9 @@ public class Shell {
             }
         };
         List<Match> lstPattern = new ArrayList<Match>();
-        String[] regEx = linuxPromptRegex;
+        String[] regEx = commandLinePromptRegex;
         //去掉特殊正则，默认回归标准的提示符匹配的正则
-    	linuxPromptRegex = null;
+        commandLinePromptRegex = null;
         if (regEx != null && regEx.length > 0) {
             synchronized (regEx) {
                 for (String regexElement : regEx) {// list of regx like, :>, />
@@ -304,8 +304,8 @@ public class Shell {
         }
     }
    
-    public void setLinuxPromptRegex(String[] linuxPromptRegex){
-    	this.linuxPromptRegex = linuxPromptRegex;
+    public void setCommandLinePromptRegex(String[] commandLinePromptRegex){
+    	this.commandLinePromptRegex = commandLinePromptRegex;
     }
     /**
      * 采用标准提示符匹配的正则和特殊正则来构造
@@ -319,9 +319,9 @@ public class Shell {
     	System.arraycopy(specific, 0, regexArray, template.length, specific.length);
     	return regexArray;
     }
-    public final static String[] LINUX_PROMPT_REGEX_TEMPLATE = new String[] { "~]#", "~#", "#",
+    public final static String[] COMMAND_LINE_PROMPT_REGEX_TEMPLATE = new String[] { "~]#", "~#", "#",
         ":~#", "/$", ">","SQL>","\\$"};
-    private String[] linuxPromptRegex = null;
+    private String[] commandLinePromptRegex = null;
     
     /**
      * 应用端口对应的farm和虚地址
@@ -390,7 +390,7 @@ public class Shell {
 				logger.error("无法登陆到		"+lb.getIp());
 				continue;
 			}
-			sshLoadBalancer.setLinuxPromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
+			sshLoadBalancer.setCommandLinePromptRegex(sshLoadBalancer.getPromptRegexArrayByTemplateAndSpecificRegex(COMMAND_LINE_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
 			
 			List<String> cmdsToExecute = new ArrayList<String>();
 			
@@ -458,7 +458,7 @@ public class Shell {
 			
 			logger.info(cmdResult);
 			///模拟输入root密码
-			shell.setLinuxPromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.LINUX_PROMPT_REGEX_TEMPLATE,new String[]{"Password:"}));
+			shell.setCommandLinePromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(SSHClient.COMMAND_LINE_PROMPT_REGEX_TEMPLATE,new String[]{"Password:"}));
 			shell.executeCommands(new String[] { rootUserPassword });
 			cmdResult = shell.getResponse();
 				
