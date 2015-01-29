@@ -203,28 +203,36 @@
 	      		var url  = '/ssh/collect/bat?command='+command;
 	        	$.post(url,function(data){
     				data = JSON.parse(data);
-    				
     				if(data.length > 0 ){   //采集之后并且有服务器被采集
+    					
+    					/**
+        				* 主机无法采集的情况下，detail为null 
+        				 	 各要显示的主机详情项单元格显示"未知"
+        				*/
+        				function hostDot(pName,host){
+        					return host[pName]?host[pName]:"未知";
+        				}
     					//显示采集到的服务器列表
     					for(var i = 0;i<data.length;i++){
         					var tr = $('<tr></tr>');
+        					var host = data[i];
         					tr.appendTo(tBody);
         					
         					$('<td></td>').text(i+1).appendTo(tr);//序号
         					
-        					$('<td></td>').text(data[i].buss).appendTo(tr);//业务名称
-        					$('<td></td>').text(data[i].hostName).appendTo(tr);//主机名
-        					$('<td></td>').text(data[i].hostType).appendTo(tr);//类型（数据库服务器or应用服务器）
+        					$('<td></td>').text(hostDot('buss',host)).appendTo(tr);//业务名称
+        					$('<td></td>').text(hostDot('hostName',host)).appendTo(tr);//主机名
+        					$('<td></td>').text(hostDot('hostType',host)).appendTo(tr);//类型（数据库服务器or应用服务器）
         					
-        					$('<td></td>').text(data[i].ip).appendTo(tr);//IP
-        					$('<td></td>').text(data[i].os?data[i].os:"未知").appendTo(tr);	//操作系统 
+        					$('<td></td>').text(hostDot('ip',host)).appendTo(tr);//IP
+        					$('<td></td>').text(hostDot('os',host)).appendTo(tr);	//操作系统 
         					$('<td style="white-space:pre;"></td>').text(data[i].commandResult).appendTo(tr);//命令执行的返回结果
         					
         				}
     					if(CollectTool.isAutoExport()){
     				 		//下载文件
     						CollectTool.exportFileFrom({
-    							url:'/ssh/export',
+    							url:'/ssh/batexport',
     							buttonIds:['#collect','#export']
     						});
     					}
@@ -234,13 +242,18 @@
     				}
     				
     				//采集完毕，恢复按钮
-    				that.disabled = false;
     				CollectTool.enableButtons(['#export','#collect']);
     				 
     			}); 
     		});
     		//导出采集到的主机信息到文件
-    		
+    		var exportButton  = $('#export').click(function(){
+    			//下载文件
+				CollectTool.exportFileFrom({
+					url:'/ssh/batexport',
+					buttonIds:['#collect','#export']
+				});
+    		});
     	});
     </script>
   </body>

@@ -1,6 +1,10 @@
 package export.io;
 
 import host.Host;
+import host.Host.Database;
+import host.Host.HostDetail;
+import host.Host.Middleware;
+import host.TinyHost;
 
  
 import java.io.FileInputStream;
@@ -28,15 +32,16 @@ import com.sun.xml.internal.ws.util.StringUtils;
 public class POIReadAndWriteTool {
 	private static POIReadAndWriteTool instance = null;
 	public static POIReadAndWriteTool getInstance(){
-		if(instance == null){
-			instance = new POIReadAndWriteTool();
-		}
-		return instance;
+		 
+		
+	 
+		return  new POIReadAndWriteTool();
 	}
-	static Workbook wb = null;  
+	Workbook wb = null;  
 	public void init(){
 		
 	}
+	 
 	/**
 	 * 将主机基本信息和详细信息写入excel文件
 	 * @param path
@@ -44,7 +49,7 @@ public class POIReadAndWriteTool {
 	 * @param fileType
 	 * @throws IOException
 	 */
-    public  void write(final List<Host> hostList,File file) throws IOException {  
+    public <T> void write(final List<T> hostList,Class<?> clazz,File file) throws IOException {  
     	 
         //创建工作文档对象  
        
@@ -62,9 +67,15 @@ public class POIReadAndWriteTool {
         //创建sheet对象  
         Sheet sheet1 = (Sheet) wb.createSheet("服务器总表");
         
-        writeHostListToSheet( hostList,  sheet1);
-        //将主机详细信息写入文件
-        writeHostListToWorkbook( hostList, wb );
+        if(clazz == Host.class){
+        	 writeHostListToSheet( (List<Host>)hostList,  sheet1);
+             //将主机详细信息写入文件
+             writeHostListToWorkbook( (List<Host>)hostList, wb );
+        }
+        if(clazz == TinyHost.class){
+        	writeTinyHostListToSheet( (List<TinyHost>)hostList,  sheet1);
+        }
+       
        
         //创建文件流  
         OutputStream stream = new FileOutputStream(file.getFile());  
@@ -79,7 +90,7 @@ public class POIReadAndWriteTool {
      * @param wb 
      * @return 
      */  
-    public static Font createFonts(){  
+    public Font createFonts(){  
         //创建Font对象  
         Font font = wb.createFont();  
         //设置字体  
@@ -111,20 +122,67 @@ public class POIReadAndWriteTool {
         int i = 1;
         List<List<String>> table = new LinkedList();
         List<String> tr = new LinkedList();
-        tr.add("序 号");tr.add("业务名称");tr.add("IP地址");tr.add("系统");tr.add("类型");
+        tr.add("序 号");tr.add("业务名称");tr.add("主机名");tr.add("服务器类型");tr.add("IP地址");tr.add("操作系统");tr.add("是否负载均衡");tr.add("是否双机");tr.add("应用系统个数");tr.add("数据库");
         table.add(tr);
         for (Iterator<Host> it = hostList.iterator(); it.hasNext();) { 
         	Host host = it.next();
           
             tr = new LinkedList();
+            HostDetail detail = host.getDetail();
             tr.add(""+i++);
             tr.add(host.getBuss());
+            tr.add(detail == null?"未知":detail.getHostName());
+            tr.add(detail == null?"未知":detail.getHostType());
             tr.add(host.getIp());
-            tr.add(host.getOs());
-            tr.add(host.getHostType());
+            tr.add(detail == null?"未知":detail.getOs());
+            tr.add(detail == null?"未知":detail.getIsLoadBalanced());
+            tr.add(detail == null?"未知":detail.getIsCluster());
+            tr.add(appCountOf(host.getmList())+"");
+            tr.add(allDbTypeAndVersionOf(host.getdList()));
             table.add(tr);
         }
         printTableToSheet(table, sheet);
+    }
+    public  void writeTinyHostListToSheet(final List<TinyHost> hostList,final Sheet sheet){
+    	 //循环写入行数据  
+        int i = 1;
+        List<List<String>> table = new LinkedList();
+        List<String> tr = new LinkedList();
+        tr.add("序 号");tr.add("业务名称");tr.add("主机名");tr.add("服务器类型");tr.add("IP地址");tr.add("返回结果");
+        table.add(tr);
+        for (Iterator<TinyHost> it = hostList.iterator(); it.hasNext();) { 
+        	TinyHost host = it.next();
+          
+            tr = new LinkedList();
+           
+            tr.add(""+i++);
+            tr.add(host.getBuss());
+            tr.add(host.getHostName());
+            tr.add(host.getHostType());
+            tr.add(host.getIp());
+            tr.add(host.getCommandResult());
+             
+            table.add(tr);
+        }
+        printTableToSheet(table, sheet);
+    }
+    private int appCountOf(List<Middleware> mList){
+    	int count = 0;
+    	for(Middleware mw:mList){
+    		count += mw.getAppList().size();
+    	}
+    	return count;
+    }
+    private String allDbTypeAndVersionOf(List<Database> dbList){
+    	
+    	StringBuffer typeAndVersion = new StringBuffer("");
+    	
+    	for(int i = 0,size = dbList.size();i < size;i++){
+    		Database db = dbList.get(i);
+    		typeAndVersion.append(db.getType()).append(",").append(db.getVersion());
+    		if((i+1)<size)	typeAndVersion.append(",");
+    	}
+    	return typeAndVersion.toString();
     }
     /**
     * 将主机的详细信息写入Excel文件的工作表
@@ -316,7 +374,7 @@ public class POIReadAndWriteTool {
         String fileType = "xlsx"; 
         POIReadAndWriteTool writer = POIReadAndWriteTool.getInstance();
         File file = new File(path, fileName, fileType);
-        writer.write(hostList,file);  
+        //writer.write(hostList,file);  
        // read(path, fileName, fileType);  
         try {
 			//(new POIReadAndWrite()).read(path,fileName,fileType);

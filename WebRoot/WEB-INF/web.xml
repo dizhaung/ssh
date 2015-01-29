@@ -19,6 +19,18 @@
 		<servlet-name>bat</servlet-name>
 		<url-pattern>/collect/bat</url-pattern>
 	</servlet-mapping>
+	
+	<!-- 执行命令后结果信息导出 -->
+	<servlet>
+		<description>执行命令后结果信息导出</description>
+		<servlet-name>batexport</servlet-name>
+		<servlet-class>export.action.BatExportActionServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>batexport</servlet-name>
+		<url-pattern>/batexport</url-pattern>
+	</servlet-mapping>
+	
 	<!-- 主机信息采集 -->
 	<servlet>
 		<description>主机采集</description>

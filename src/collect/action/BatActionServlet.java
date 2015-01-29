@@ -48,7 +48,7 @@ public class BatActionServlet extends HttpServlet {
 		boolean isNotEverRead = false;
 		if(list == null){
 			//读取主机登录信息文件
-			list = TinyHost.getHostList(FileManager.readFile("/hostConfig.txt"));
+			list = TinyHost.getHostList(FileManager.readFile("/batHostConfig.txt"));
 			isNotEverRead = true;
 		}
 		//执行命令

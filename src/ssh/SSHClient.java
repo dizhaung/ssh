@@ -1418,6 +1418,7 @@ public class SSHClient {
     	if(lines.length > 3){//安装了db2，没有启动实例
     		Host.Database db = new Host.Database();
 			h.addDatabase(db);
+			db.setIp(h.getIp());
 			db.setType("DB2");
 			List<String> db2InstanceUserListOfAllInstance = collectAllInstanceUserListForDB2( shell,  h);
     		//取每个实例用户所对应实例的数据库
@@ -2234,7 +2235,7 @@ public class SSHClient {
 		    			/*HintMsg msg = new HintMsg(nowNum++,maxNum,"当前IP:"+h.getIp(),"当前主机采集进度");
 		    			DwrPageContext.run(JSONObject.fromObject(msg).toString());
 		    			logger.info(msg);*/
-		    			// 初始化服务器连接信息
+		    			// 登录
 		    			SSHClient ssh = new SSHClient(h.getIp(), h.getJkUser(), h.getJkUserPassword());
  
 		    			// 建立连接

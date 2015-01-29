@@ -115,13 +115,35 @@ public class SSHClientTest {
 			}
 		 
 	 }
+	 @Test
+	 public void testCollectDB2ForAix(){
+		 List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
+			for(Iterator<Host> it = list.iterator();it.hasNext();){
+				Host h = it.next();
+				Shell shell = null;
+				try {
+					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+				} catch (ShellException e) {
+					// TODO Auto-generated catch block
+					
+					e.printStackTrace();
+					continue;
+				}
+				shell.setTimeout(2*1000);
+				SSHClient.collectDB2ForAix(shell,h);
+			}
+	 }
 //	@Test
 	 public void match(){
-		 System.out.println(SSHClient.connectDatabaseSuccess(" database Connection Information Database server        = DB2/AIX64 9.7.9 SQL authorization ID   = DB2INSTLocal database alias   = TBMPRD "));
+		 //System.out.println(SSHClient.connectDatabaseSuccess(" database Connection Information Database server        = DB2/AIX64 9.7.9 SQL authorization ID   = DB2INSTLocal database alias   = TBMPRD "));
+	 
+	}
+	 @Test
+	 public void testStringMatch(){
+		 System.out.println("ibdata1".matches("ibdata\\w*"));
 	 }
 	 
-	 
-	 @Test
+//	 @Test
 	 public void testCollectTomcatForLinux(){
 		 List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 			for(Iterator<Host> it = list.iterator();it.hasNext();){
@@ -137,6 +159,45 @@ public class SSHClientTest {
 				}
 				shell.setTimeout(2*1000);
 				SSHClient.collectTomcatForLinux(shell,h,new ArrayList());
+			}
+	 }
+	 
+	 
+//	 @Test
+	 public void testCollectMysqlForLinux(){
+		 List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
+			for(Iterator<Host> it = list.iterator();it.hasNext();){
+				Host h = it.next();
+				Shell shell = null;
+				try {
+					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+				} catch (ShellException e) {
+					// TODO Auto-generated catch block
+					
+					e.printStackTrace();
+					continue;
+				}
+				shell.setTimeout(2*1000);
+				SSHClient.collectMysqlForLinux(shell,h);
+			}
+	 }
+	 
+//	 @Test
+	 public void testCollectWebSphereForAIX(){
+		 List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
+			for(Iterator<Host> it = list.iterator();it.hasNext();){
+				Host h = it.next();
+				Shell shell = null;
+				try {
+					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+				} catch (ShellException e) {
+					// TODO Auto-generated catch block
+					
+					e.printStackTrace();
+					continue;
+				}
+				shell.setTimeout(2*1000);
+				SSHClient.collectWebSphereForAIX(shell,h,new ArrayList());
 			}
 	 }
 	 private static Log logger = LogFactory.getLog(SSHClientTest.class);
