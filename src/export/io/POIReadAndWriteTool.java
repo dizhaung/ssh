@@ -4,6 +4,7 @@ import host.Host;
 import host.Host.Database;
 import host.Host.HostDetail;
 import host.Host.Middleware;
+import host.HostBase;
 import host.TinyHost;
 
  
@@ -49,7 +50,7 @@ public class POIReadAndWriteTool {
 	 * @param fileType
 	 * @throws IOException
 	 */
-    public <T> void write(final List<T> hostList,Class<?> clazz,File file) throws IOException {  
+    public  void write(final List<? extends HostBase> hostList,Class<?> clazz,File file) throws IOException {  
     	 
         //创建工作文档对象  
        
@@ -66,8 +67,8 @@ public class POIReadAndWriteTool {
         }  
         //创建sheet对象  
         Sheet sheet1 = (Sheet) wb.createSheet("服务器总表");
-        
-        if(clazz == Host.class){
+       
+        if( clazz == Host.class){
         	 writeHostListToSheet( (List<Host>)hostList,  sheet1);
              //将主机详细信息写入文件
              writeHostListToWorkbook( (List<Host>)hostList, wb );
