@@ -115,7 +115,7 @@ public class SSHClientTest {
 			}
 		 
 	 }
-	 @Test
+//	 @Test
 	 public void testCollectDB2ForAix(){
 		 List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 			for(Iterator<Host> it = list.iterator();it.hasNext();){
@@ -161,8 +161,24 @@ public class SSHClientTest {
 				SSHClient.collectTomcatForLinux(shell,h,new ArrayList());
 			}
 	 }
-	 
-	 
+	 @Test
+	 public void  testCollectTongwebForLinux(){
+		 List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
+			for(Iterator<Host> it = list.iterator();it.hasNext();){
+				Host h = it.next();
+				Shell shell = null;
+				try {
+					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+				} catch (ShellException e) {
+					// TODO Auto-generated catch block
+					
+					e.printStackTrace();
+					continue;
+				}
+				shell.setTimeout(2*1000);
+				SSHClient.collectTongwebForLinux(shell,h,new ArrayList());
+			}
+	 }
 //	 @Test
 	 public void testCollectMysqlForLinux(){
 		 List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));

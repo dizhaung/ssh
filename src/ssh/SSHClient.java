@@ -15,10 +15,14 @@ import host.middleware.tomcat.Service.Connector;
 import host.middleware.tomcat.Service.Engine;
 import host.middleware.tomcat.Service.HttpConnector;
 import host.middleware.tomcat.Service.Engine.Host.Context;
+import host.middleware.tongweb.HttpListener;
+import host.middleware.tongweb.VirtualServer;
+import host.middleware.tongweb.WebApp;
 
 
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +47,10 @@ import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
+import org.dom4j.io.SAXReader;
+import org.xml.sax.EntityResolver;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import ssh.collect.AixCollector;
 
@@ -871,8 +879,212 @@ public class SSHClient {
     	
     	collectWeblogicForLinux(shell,h,portListFromLoad);
     	collectTomcatForLinux(shell,h,portListFromLoad);
+    	collectTongwebForLinux(shell,h,portListFromLoad);
     }
-    
+    static void collectTongwebForLinux(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+    	grantRoot(shell,h);
+    	shell.executeCommands(new String[]{ "ps -ef|grep tongweb" });
+    	String cmdResult = shell.getResponse();
+    	
+    	logger.info(h.getIp()+cmdResult);
+    	String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+    	
+    	if(lines.length > 3){
+    		//假如安装有多个tongweb中间件的话，每个运行的tongweb中间件都有自己的tongweb.root安装路径
+    		Set<String> tongwebProcessInfoLineSet = new HashSet();
+    		
+    		Pattern deploymentDirPattern  = Pattern.compile("Dtongweb\\.root\\s*=\\s*(\\S+)");
+    		
+    		for(String line : lines){
+    			Matcher deploymentDirMatcher = deploymentDirPattern.matcher(line);
+    			if(deploymentDirMatcher.find()){
+    				tongwebProcessInfoLineSet.add(line);
+    			}
+    		}
+    		
+    		logger.info(h.getIp()+tongwebProcessInfoLineSet);
+    		for(String tongwebProcessInfoLine:tongwebProcessInfoLineSet){
+    			Host.Middleware mw = new Host.Middleware();
+    			h.addMiddleware(mw);
+    			mw.setType("TongWeb");
+    			mw.setIp(h.getIp());
+    			
+    			//tongweb安装路径
+    			String deploymentDir = shell.parseInfoByRegex("Dtongweb\\.root\\s*=\\s*(\\S+)", tongwebProcessInfoLine, 1);
+    			mw.setDeploymentDir(deploymentDir);
+    			logger.info(h.getIp()+deploymentDir);
+    			//tongweb版本
+    			
+    			//JDK版本
+    			String javaCommand = shell.parseInfoByRegex("(/\\S+?/java)\\s", tongwebProcessInfoLine, 1);
+    			logger.info(h.getIp()+"	java命令路径	"+shell.parseInfoByRegex("(/\\S+?/java)\\s", tongwebProcessInfoLine, 1));
+    			
+    			shell.executeCommands(new String[]{javaCommand+" -version"});
+    			cmdResult = shell.getResponse();
+    			
+    			logger.info(h.getIp()+cmdResult);
+    			mw.setJdkVersion(shell.parseInfoByRegex("java\\s+version\\s+\"([^\"]+)\"", cmdResult, 1));
+    			logger.info(h.getIp()+"	JDK版本	"+shell.parseInfoByRegex("java\\s+version\\s+\"([^\"]+)\"", cmdResult, 1));
+    			//应用列表
+    			//采集 weblogic的应用列表
+    			List<App> appList = searchServiceIpAndPortForEachOf(collectAppListForTongweb(shell, deploymentDir,h),portListFromLoad);
+    			
+    			mw.setAppList(appList);
+    		}
+    		
+    	}
+    }
+    static List<App> collectAppListForTongweb(final Shell shell,final String tongwebRoot, final Host h){
+    	String configPath = tongwebRoot+"/config/";
+    	List<App> appList = new ArrayList();
+    	if(existFileOnPath(configPath,"twns.xml",shell)){
+    		shell.executeCommands(new String[]{ "cat "+configPath+"twns.xml" });
+        	String cmdResult = shell.getResponse();
+        	
+        	logger.info(h.getIp()+cmdResult);
+    		
+        	String twnsDotXmlText = parseValidXmlTextFrom(cmdResult);
+        	logger.info(h.getIp()+"格式化后twns.xml内容	"+twnsDotXmlText);
+        	Document twnsDotXmlDoc = null;
+    		try {
+    			SAXReader reader = new SAXReader();
+    			reader.setValidation(false);
+    			reader.setEntityResolver(new EntityResolver(){
+
+					@Override
+					public InputSource resolveEntity(String publicId,
+							String systemId) throws SAXException, IOException {
+						// TODO Auto-generated method stub
+						if(systemId.equals("http://www.tongtech.com/dtds/tongweb-config.dtd")){
+							return new InputSource(new StringReader(""));
+						}
+						return null;
+					}
+    				
+    			});
+    			
+    			twnsDotXmlDoc = reader.read(new StringReader(twnsDotXmlText));
+			
+    		} catch (DocumentException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				logger.info("xml文本串不合法");
+			}
+    		/**
+    		 * 
+    		 */
+    		Element twnsNode = twnsDotXmlDoc.getRootElement();
+    		Element serverNode = twnsNode.element("server");
+    		Element webContainerNode = serverNode.element("web-container");
+    		List<Element> virtualServerNodeList = webContainerNode.elements("virtual-server");
+    		Element deploymentsNode = 	twnsNode.element("deployments");
+    		List<Element> webAppNodeList = deploymentsNode.elements("web-app");
+    		/**
+    		 * twns.xml中 web-app元素中的vs-names属性和 virtual-server元素的id属性相对应
+    		 * 1.多个virtual-server中，每个virtual-server所对应的http-listener
+    		 * 2.http-listener找到它的port,将port和virtual-server相关联
+    		 */
+    		
+    		Set<VirtualServer> virtualServerSet = new HashSet();
+    		for(Element virtualServerNode : virtualServerNodeList){
+    			String idAttrValue = virtualServerNode.attributeValue("id");
+    			String httpListenersAttrValue = virtualServerNode.attributeValue("http-listeners");
+    			
+    			VirtualServer virtualServer = new VirtualServer();
+    			virtualServer.setId(idAttrValue);
+    			String[] httpListenersArray  = httpListenersAttrValue.split(",");
+    			for(String httpListener : httpListenersArray){
+    				virtualServer.addHttpListener(httpListener);
+    			}
+    			
+    			virtualServerSet.add(virtualServer);
+    		}
+    		logger.info(h.getIp()+virtualServerSet);
+    		List<Element> httpListenerNodeList = webContainerNode.elements("http-listener");
+    	
+    		Set<HttpListener> httpListenerSet = new HashSet();
+    		for(Element httpListenerNode : httpListenerNodeList){
+    			String idAttrValue = httpListenerNode.attributeValue("id");
+    			String defaultVirtualServerAttrValue  = httpListenerNode.attributeValue("default-virtual-server");
+    			String portAttrValue = httpListenerNode.attributeValue("port"); 
+    			boolean securityEnabled = Boolean.parseBoolean(httpListenerNode.attributeValue("security-enabled"));
+    			
+    			HttpListener httpListener = new HttpListener();
+    			httpListener.setId(idAttrValue);
+    			httpListener.setDefaultVirtualServer(defaultVirtualServerAttrValue);
+    			httpListener.setPort(portAttrValue);
+    			httpListener.setSecurityEnabled(securityEnabled);
+    			httpListenerSet.add(httpListener);
+    			
+    		}
+    		
+    		logger.info(h.getIp()+httpListenerSet);
+    		Set<WebApp> webAppSet = new HashSet();
+    		
+    		for(Element webAppNode : webAppNodeList){
+    			String contextRoot = webAppNode.attributeValue("context-root");
+    			String sourcePath = webAppNode.attributeValue("source-path");
+    			String name = webAppNode.attributeValue("name");
+    			String vsNames = webAppNode.attributeValue("vs-names");
+    			
+    			WebApp webApp = new WebApp();
+    			webApp.setName(vsNames);
+    			webApp.setSourcePath(sourcePath.replaceAll(Pattern.quote("${tongweb.root}"), tongwebRoot));
+    			webApp.setContextRoot(contextRoot);
+    			
+    			String[] vsNamesArray = vsNames == null?new String[0]:vsNames.split(",");
+    			
+    			for(String vsName  : vsNamesArray){
+    				webApp.addVsName(vsName);
+    			}
+    			webAppSet.add(webApp);
+    		}
+    		logger.info(h.getIp()+webAppSet);
+    		
+    		Map<VirtualServer,Set<HttpListener>>	virtualServerAndHttpListenerSetMap = new HashMap();
+
+    		for(VirtualServer virtualServer : virtualServerSet){
+    			Set<HttpListener> httpListenerSetToVirtualServer = new HashSet();
+				for(String httpListenerId : virtualServer.getHttpListenerSet()){
+					
+					for(HttpListener httpListener : httpListenerSet){
+						if(httpListenerId.equals(httpListener.getId())){
+							httpListenerSetToVirtualServer.add(httpListener);
+						}
+					}
+				}
+				virtualServerAndHttpListenerSetMap.put(virtualServer, httpListenerSetToVirtualServer);
+			}
+		
+    		logger.info(h.getIp()+virtualServerAndHttpListenerSetMap);
+    	
+    		for(WebApp webApp : webAppSet){
+    			for(String vsName : webApp.getVsNameSet()){
+    				VirtualServer virtualServer = new  VirtualServer(vsName);
+    				if(virtualServerAndHttpListenerSetMap.containsKey(virtualServer)){
+    					Set<HttpListener> httpListenerSetToVirtualServer = virtualServerAndHttpListenerSetMap.get(virtualServer);
+    					for(HttpListener httpListener : httpListenerSetToVirtualServer){
+    						App app = new App();
+    						appList.add(app);
+    						String schema = "http://";
+    						if(httpListener.isSecurityEnabled())
+    							schema = "https://";
+    						app.setAppName(schema+h.getIp()+":"+httpListener.getPort()+"/"+webApp.getContextRoot());//IP处需要虚拟主机名，目前无法获取
+    						app.setDir(webApp.getSourcePath());
+    						app.setPort(httpListener.getPort());
+    						app.setServiceIp("无");
+    						app.setServicePort("无");
+    						 
+    					}
+    				}
+    			}
+    		}
+    		
+    		
+    	}
+    	logger.info(h.getIp()+appList);
+    	return appList;
+    }
     static void collectMysqlForLinux(final Shell shell,final Host h){
     	grantRoot(shell,h);
     	shell.executeCommands(new String[]{ "ps -ef|grep mysqld" });
@@ -1373,7 +1585,7 @@ public class SSHClient {
 		}
    	}
    	static List<App>  searchServiceIpAndPortForEachOf(final List<App> appList,final List<PortLoadConfig> portListFromLoad){
-   	///主机端口和服务IP(虚地址)-服务端口（虚端口）-端口对应表（PortLoadConfig）中的端口字段对应
+   	///主机端口和             服务IP(虚地址)-服务端口（虚端口）-端口对应表（PortLoadConfig）中的端口字段对应
 		for(int i = 0 , size = appList.size();i<size;i++){
 			App app = appList.get(i);
 			for(PortLoadConfig port:portListFromLoad){
@@ -1881,9 +2093,20 @@ public class SSHClient {
     	return appListOfAllCell;
     }
     static boolean existFileOnPath(final String path,final String fileName,final Shell shell){
-    	shell.executeCommands(new String[] { "ls "+path+" |grep "+fileName});
+    	
+    	shell.executeCommands(new String[] { "cd "+path});
 		String cmdResult = shell.getResponse();
+		logger.info(cmdResult);
 		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+		if(lines.length > 2 ){
+			logger.info("不存在"+path+"路径或者不是一个文件夹");
+			return false;
+		}
+    	shell.executeCommands(new String[] { "ls "+path+" |grep "+fileName});
+    	cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 		if(lines.length > 2){
 			logger.info("在"+path+"文件夹下存在文件"+fileName+"文件");
 			return true;
