@@ -1373,7 +1373,7 @@ public class SSHClient {
 		}
    	}
    	static List<App>  searchServiceIpAndPortForEachOf(final List<App> appList,final List<PortLoadConfig> portListFromLoad){
-   	///主机端口和服务IP(虚地址)-服务端口（虚端口）-端口对应表（PortLoadConfig）中的端口字段对应
+   	///主机端口和             服务IP(虚地址)-服务端口（虚端口）-端口对应表（PortLoadConfig）中的端口字段对应
 		for(int i = 0 , size = appList.size();i<size;i++){
 			App app = appList.get(i);
 			for(PortLoadConfig port:portListFromLoad){
@@ -1881,9 +1881,20 @@ public class SSHClient {
     	return appListOfAllCell;
     }
     static boolean existFileOnPath(final String path,final String fileName,final Shell shell){
-    	shell.executeCommands(new String[] { "ls "+path+" |grep "+fileName});
+    	
+    	shell.executeCommands(new String[] { "cd "+path});
 		String cmdResult = shell.getResponse();
+		logger.info(cmdResult);
 		String[] lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
+		if(lines.length > 2 ){
+			logger.info("不存在"+path+"路径或者不是一个文件夹");
+			return false;
+		}
+    	shell.executeCommands(new String[] { "ls "+path+" |grep "+fileName});
+    	cmdResult = shell.getResponse();
+		
+		logger.info(cmdResult);
+		lines = cmdResult.split(Regex.CommonRegex.LINE_REAR.toString());
 		if(lines.length > 2){
 			logger.info("在"+path+"文件夹下存在文件"+fileName+"文件");
 			return true;
