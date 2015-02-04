@@ -582,7 +582,7 @@ public class SSHClient {
 		
 		if(lines.length > 3){//安装有Tomcat.
 			
-			Matcher catalinaHomeMatcher = Pattern.compile("Dcatalina\\.home=(\\S+)").matcher(cmdResult);
+			Matcher catalinaHomeMatcher = Pattern.compile(Regex.LinuxRegex.TOMCAT_CATALINA_HOME.toString()).matcher(cmdResult);
 			Set<String> multipulInstanceCatalinaHomeSet = new HashSet();
 			while(catalinaHomeMatcher.find()){
 				String catalinaHome = catalinaHomeMatcher.group(1);

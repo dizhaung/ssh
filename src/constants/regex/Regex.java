@@ -164,6 +164,10 @@ public interface Regex {
 		MYSQL_DEPLOYMENT_DIR("--basedir=(\\S+)"),
 		MYSQL_DATA_DIR("--datadir=(\\S+)"),
 		MYSQL_VERSION("Distrib\\s*(\\S+),")
+		,
+		TOMCAT_CATALINA_HOME("Dcatalina\\.home=(\\S+)")
+		,
+
 		;
 		private final String regex;
 		private LinuxRegex(String regex){
