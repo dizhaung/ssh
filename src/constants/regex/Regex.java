@@ -42,6 +42,8 @@ public interface Regex {
 		LINE_COMMENT("^#.*")
 		,
 		ITEM_DELIMITER("\\|")
+		,
+		DIR_NAME("(\\S+)$")
 		;
 		
 		private final String regex;
@@ -159,6 +161,13 @@ public interface Regex {
 	public enum LinuxRegex implements Regex {
 		HOST_TYPE("\\s*uname -M\r\n(.*)\r\n"),
 		
+		MYSQL_DEPLOYMENT_DIR("--basedir=(\\S+)"),
+		MYSQL_DATA_DIR("--datadir=(\\S+)"),
+		MYSQL_VERSION("Distrib\\s*(\\S+),")
+		,
+		TOMCAT_CATALINA_HOME("Dcatalina\\.home=(\\S+)")
+		,
+
 		;
 		private final String regex;
 		private LinuxRegex(String regex){
