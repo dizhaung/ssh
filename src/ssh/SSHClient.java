@@ -899,17 +899,17 @@ public class SSHClient {
     			db.setIp(h.getIp());
     			
     			//数据库部署路径
-    			db.setDeploymentDir(shell.parseInfoByRegex("--basedir=(\\S+)", cmdResult, 1));
+    			db.setDeploymentDir(shell.parseInfoByRegex(Regex.LinuxRegex.MYSQL_DEPLOYMENT_DIR, cmdResult, 1));
     			
     			//数据文件保存路径
-    			String dataDir = shell.parseInfoByRegex("--datadir=(\\S+)", cmdResult, 1);
+    			String dataDir = shell.parseInfoByRegex(Regex.LinuxRegex.MYSQL_DATA_DIR, cmdResult, 1);
     			db.setDataFileDir(dataDir);
     			//版本号
     			shell.executeCommands(new String[]{"mysql --help|grep Distrib"});
     			cmdResult = shell.getResponse();
     			logger.info(h.getIp()+"	版本信息	"+cmdResult);
     			
-    			db.setVersion(shell.parseInfoByRegex("Distrib\\s*(\\S+),", cmdResult, 1));
+    			db.setVersion(shell.parseInfoByRegex(Regex.LinuxRegex.MYSQL_VERSION, cmdResult, 1));
     			
     			//数据文件及其大小
     			
@@ -923,7 +923,7 @@ public class SSHClient {
         				//列出各数据库目录的名字和ibdata\w*(innodb引擎共享数据库表空间)，待下一步从获取此文件夹内所有目录和文件的列表中提取这些符合规定的文件大小
         				Set<String> dataFileNameSet = new HashSet();
         				for(int i = 1,size = lines.length-1;i < size;i++){
-        					dataFileNameSet.add(shell.parseInfoByRegex("(\\S+)$", lines[i], 1));
+        					dataFileNameSet.add(shell.parseInfoByRegex(Regex.CommonRegex.DIR_NAME, lines[i], 1));
         				}
         				dataFileNameSet.add("ibdata\\w*");
             			shell.executeCommands(new String[]{"du -sm *"});
