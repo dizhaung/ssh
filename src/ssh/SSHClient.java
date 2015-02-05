@@ -1618,8 +1618,8 @@ public class SSHClient {
 		
 			//运行db2实例的用户名,至少有一个用户在运行db2实例
 			for(String line:lines){
-				if(!Pattern.compile("grep db2sysc").matcher(line).find()){
-					Matcher db2UserMatcher = Pattern.compile("^\\s*([\\s\\S]+?)\\s").matcher(line);
+				if(!Pattern.compile(Regex.AixRegex.WEBSPHERE_INSTANCE_PROCESS.toString()).matcher(line).find()){
+					Matcher db2UserMatcher = Pattern.compile(Regex.AixRegex.WEBSPHREE_INSTANCE_USER.toString()).matcher(line);
 					if(db2UserMatcher.find()){
 						db2RunningUserSet.add(db2UserMatcher.group(1));
 					}
