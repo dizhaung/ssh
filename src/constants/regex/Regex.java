@@ -167,7 +167,11 @@ public interface Regex {
 		,
 		TOMCAT_CATALINA_HOME("Dcatalina\\.home=(\\S+)")
 		,
-
+		TOMCAT_VERSION("Server\\s+number:\\s*([\\w.]+)")
+		,
+		TOMCAT_JRE_HOME("JRE_HOME:\\s*(\\S+)")
+		,
+		JDK_VERSION("\"([\\w.]+)\"")
 		;
 		private final String regex;
 		private LinuxRegex(String regex){

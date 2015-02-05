@@ -603,15 +603,15 @@ public class SSHClient {
 				shell.executeCommands(new String[] { "cd "+deploymentDir+"/bin","./version.sh" });
 				cmdResult = shell.getResponse();
 				logger.info(h.getIp()+cmdResult);
-				mw.setVersion(shell.parseInfoByRegex("Server\\s+number:\\s*([\\w.]+)", cmdResult, 1)); 
+				mw.setVersion(shell.parseInfoByRegex(Regex.LinuxRegex.TOMCAT_VERSION, cmdResult, 1)); 
 				
 				//JDK版本
-				String jre_home = shell.parseInfoByRegex("JRE_HOME:\\s*(\\S+)", cmdResult, 1);
+				String jre_home = shell.parseInfoByRegex(Regex.LinuxRegex.TOMCAT_JRE_HOME, cmdResult, 1);
 				shell.executeCommands(new String[] { jre_home+"/bin/java -version" });
 				cmdResult = shell.getResponse();
 				
 				logger.info(h.getIp()+cmdResult);
-				mw.setJdkVersion(shell.parseInfoByRegex("\"([\\w.]+)\"", cmdResult, 1));
+				mw.setJdkVersion(shell.parseInfoByRegex(Regex.LinuxRegex.JDK_VERSION, cmdResult, 1));
 				
 				logger.info(mw);
 				//tomcat应用列表
