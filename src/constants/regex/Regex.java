@@ -130,6 +130,12 @@ public interface Regex {
 		WEBLOGIC_8_APP_DIR("<[Aa]pplication[\\s\\S]+?[Pp]ath=\"([\\S]+)\"")
 		,
 		WEBLOGIC_8_APP_PORT("[Ll]isten[Pp]ort\\s*=\\s*[\"']?(\\d{1,5})[\"']")
+		
+		
+		,
+		WEBSPHERE_INSTANCE_PROCESS("grep db2sysc")
+		,
+		WEBSPHREE_INSTANCE_USER("^\\s*([\\s\\S]+?)\\s")
 		;
 		private final String regex;
 		private AixRegex(String regex){
