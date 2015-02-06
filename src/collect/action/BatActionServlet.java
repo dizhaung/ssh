@@ -18,7 +18,7 @@ import net.sf.json.JSONArray;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import ssh.SSHClient;
+import ssh.bat.CommandExecutor;
 
 public class BatActionServlet extends HttpServlet {
 
@@ -52,7 +52,7 @@ public class BatActionServlet extends HttpServlet {
 			isNotEverRead = true;
 		}
 		//执行命令
-		SSHClient.startBat(list,command,isNotEverRead);
+		CommandExecutor.startBat(list,command,isNotEverRead);
 		req.getSession().setAttribute("tinyhostlist", list);
 		PrintWriter out = resp.getWriter();
 		JSONArray o = JSONArray.fromObject(list);

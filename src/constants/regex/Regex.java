@@ -136,6 +136,12 @@ public interface Regex {
 		WEBSPHERE_INSTANCE_PROCESS("grep db2sysc")
 		,
 		WEBSPHREE_INSTANCE_USER("^\\s*([\\s\\S]+?)\\s")
+		
+		
+		
+		
+		,
+		DB2_INSTANCE_USER("(/\\S+)*/(\\S+?)/sqllib")
 		;
 		private final String regex;
 		private AixRegex(String regex){

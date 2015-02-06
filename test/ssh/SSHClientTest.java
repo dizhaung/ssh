@@ -34,6 +34,9 @@ import org.dom4j.io.SAXReader;
 import org.junit.Before;
 import org.junit.Test;
 
+import ssh.collect.AixCollector;
+import ssh.collect.LinuxCollector;
+
 public class SSHClientTest {
 	private static Host  host = new Host();
 	@Before
@@ -62,7 +65,7 @@ public class SSHClientTest {
 				continue;
 			}
 			shell.setTimeout(2*1000);
-			SSHClient.collectDB2ForAix(shell, h);
+			AixCollector.collectDB2(shell, h);
 		}
 		
 		System.out.println(list);
@@ -91,7 +94,7 @@ public class SSHClientTest {
 				continue;
 			}
 			shell.setTimeout(2*1000);
-			SSHClient.collectWebSphereForAIX(shell, h,new ArrayList());
+			AixCollector.collectWebSphereForAIX(shell, h,new ArrayList());
 		}
 		
 		System.out.println(list);
@@ -111,7 +114,7 @@ public class SSHClientTest {
 					continue;
 				}
 				shell.setTimeout(2*1000);
-				SSHClient.collectOracleForLinux(shell,h);
+				LinuxCollector.collectOracle(shell,h);
 			}
 		 
 	 }
@@ -130,7 +133,7 @@ public class SSHClientTest {
 					continue;
 				}
 				shell.setTimeout(2*1000);
-				SSHClient.collectDB2ForAix(shell,h);
+				AixCollector.collectDB2(shell,h);
 			}
 	 }
 //	@Test
@@ -158,7 +161,7 @@ public class SSHClientTest {
 					continue;
 				}
 				shell.setTimeout(2*1000);
-				SSHClient.collectTomcatForLinux(shell,h,new ArrayList());
+				LinuxCollector.collectTomcat(shell,h,new ArrayList());
 			}
 	 }
 	 @Test
@@ -176,7 +179,7 @@ public class SSHClientTest {
 					continue;
 				}
 				shell.setTimeout(2*1000);
-				SSHClient.collectTongwebForLinux(shell,h,new ArrayList());
+				LinuxCollector.collectTongweb(shell,h,new ArrayList());
 			}
 	 }
 //	 @Test
@@ -194,7 +197,7 @@ public class SSHClientTest {
 					continue;
 				}
 				shell.setTimeout(2*1000);
-				SSHClient.collectMysqlForLinux(shell,h);
+				LinuxCollector.collectMysqlForLinux(shell,h);
 			}
 	 }
 	 
@@ -213,7 +216,7 @@ public class SSHClientTest {
 					continue;
 				}
 				shell.setTimeout(2*1000);
-				SSHClient.collectWebSphereForAIX(shell,h,new ArrayList());
+				AixCollector.collectWebSphereForAIX(shell,h,new ArrayList());
 			}
 	 }
 	 private static Log logger = LogFactory.getLog(SSHClientTest.class);

@@ -17,7 +17,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import ssh.SSHClient;
+import ssh.collect.HostCollector;
 
 import net.sf.json.JSONArray;
 
@@ -44,7 +44,7 @@ public class CollectActionServlet extends HttpServlet {
 		List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		logger.info("---采集---");
 		//采集
-		SSHClient.startCollect(list);
+		HostCollector.startCollect(list);
 		getServletContext().setAttribute("hostlist", list);
 		PrintWriter out = resp.getWriter();
 		JSONArray o = JSONArray.fromObject(list);
