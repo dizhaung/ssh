@@ -55,13 +55,13 @@ public class AixCollector extends HostCollector {
 			return shell.parseInfoByRegex(Regex.AixRegex.HOST_NAME,cmdResult,1);
 	  }
 		  
-	   public void collectTongweb(Shell shell, Host h,
+	   protected void collectTongweb(Shell shell, Host h,
 			List<PortLoadConfig> portListFromLoad) {
 		// TODO Auto-generated method stub
 		
 	}
 
-	 public void collectTomcat(Shell shell, Host h,
+	 protected void collectTomcat(Shell shell, Host h,
 			List<PortLoadConfig> portListFromLoad) {
 		// TODO Auto-generated method stub
 		
@@ -73,7 +73,7 @@ public class AixCollector extends HostCollector {
 	 * @date 2015-1-8下午4:49:58
 	 * @author HP
 	 */
-	public void collectDB2(final Shell shell,final Host h){
+	protected void collectDB2(final Shell shell,final Host h){
 		//检测安装有db2数据库，但是没有启动实例的情况
 		shell.executeCommands(new String[] { "ps -ef|grep db2fmcd" });
 		String cmdResult = shell.getResponse();
@@ -265,7 +265,7 @@ public class AixCollector extends HostCollector {
 	     * @date 2015-1-9下午4:46:27
 	     * @author HP
 	     */
-	   public void collectHostDetail(final Shell shell,final SSHClient ssh,final Host h,final List<PortLoadConfig> portListFromLoad){
+	   protected void collectHostDetail(final Shell shell,final SSHClient ssh,final Host h,final List<PortLoadConfig> portListFromLoad){
 	    
 		   Host.HostDetail hostDetail = new Host.HostDetail();
 			h.setDetail(hostDetail);
@@ -488,7 +488,7 @@ public class AixCollector extends HostCollector {
 	 * @date 2015-1-9下午4:45:15
 	 * @author HP
 	 */
-	public  void collectWeblogic(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+	protected  void collectWeblogic(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
 	
 		/*********************
 		 * weblogic中间件信息
@@ -543,7 +543,7 @@ public class AixCollector extends HostCollector {
 	* @date 2015-1-9下午3:42:34
 	* @author HP
 	*/
-	public void collectOracle(Shell shell,final Host h){
+	protected void collectOracle(Shell shell,final Host h){
 	
 		//检测是否安装了Oracle数据库
 	
@@ -685,7 +685,7 @@ public class AixCollector extends HostCollector {
 	  * @date 2015-1-7下午4:30:09
 	  * @author HP
 	  */
-	public void collectWebSphere(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+	protected void collectWebSphere(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
 		shell.executeCommands(new String[] { "" });
 		shell.executeCommands(new String[] { "ps -ef|grep websphere" });
 		String cmdResult = shell.getResponse();

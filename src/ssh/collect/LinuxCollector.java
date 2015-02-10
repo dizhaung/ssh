@@ -55,7 +55,7 @@ public class LinuxCollector extends HostCollector {
 
 	private static Log logger = LogFactory.getLog(LinuxCollector.class);
 
-	public void collectHostDetail(final Shell shell,SSHClient ssh,final Host h, final List<PortLoadConfig> portListFromLoad){
+	protected void collectHostDetail(final Shell shell,SSHClient ssh,final Host h, final List<PortLoadConfig> portListFromLoad){
 	
 		
 		Host.HostDetail hostDetail = new Host.HostDetail();
@@ -184,16 +184,16 @@ public class LinuxCollector extends HostCollector {
 		
 	}
 
-	public void collectOracle(Shell shell,final Host h){
+	protected void collectOracle(Shell shell,final Host h){
 		//检测是否安装了Oracle数据库
 		shell.executeCommands(new String[] { "ps -ef|grep tnslsnr" });
 		String cmdResult = shell.getResponse();
 		logger.info(cmdResult);
 		 
-		boolean isExist = cmdResult.split("[\r\n]+").length >=4?true:false;
+		boolean isExistOracle = cmdResult.split("[\r\n]+").length >=4?true:false;
 		
 		//安装有Oracle
-		if(isExist){
+		if(isExistOracle){
 			Host.Database db = new Host.Database();
 			h.addDatabase(db);
 			//
@@ -267,7 +267,7 @@ public class LinuxCollector extends HostCollector {
 		
 	}
 
-	public  void collectWeblogic(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+	protected  void collectWeblogic(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
 		//weblogic中间件信息
 		 
 				shell.executeCommands(new String[] { "ps -ef|grep weblogic" });
@@ -309,7 +309,7 @@ public class LinuxCollector extends HostCollector {
 			
 	}
 
-	public void collectTomcat(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+	protected void collectTomcat(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
 	
 		shell.executeCommands(new String[] { "ps -ef|grep  org.apache.catalina.startup.Bootstrap" });
 		String cmdResult = shell.getResponse();
@@ -586,18 +586,18 @@ public class LinuxCollector extends HostCollector {
 		return appList;
 	}
 
-	public void collectWebSphere(Shell shell, host.Host h,
+	protected void collectWebSphere(Shell shell, host.Host h,
 			List<PortLoadConfig> portListFromLoad) {
 		// TODO Auto-generated method stub
 		
 	}
 
-	 public void collectDB2(Shell shell, host.Host h) {
+	 protected void collectDB2(Shell shell, host.Host h) {
 		// TODO Auto-generated method stub
 		
 	}
 
-	public void collectTongweb(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
+	protected void collectTongweb(final Shell shell,final Host h,final List<PortLoadConfig> portListFromLoad){
 		grantRoot(shell,h);
 		shell.executeCommands(new String[]{ "ps -ef|grep tongweb" });
 		String cmdResult = shell.getResponse();

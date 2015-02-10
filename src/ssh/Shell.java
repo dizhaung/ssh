@@ -465,7 +465,7 @@ public class Shell {
 			logger.info(cmdResult);
 			
 			// 初始化服务器连接信息(特殊情况使用，每执行一个命令连接一次)
-			SSHClient ssh = new SSHClient(ip, jkUser, jkUserPassword);
+			SSHClient ssh = new SSHClient(h);
 			
 			
 			shell.executeCommands(new String[] { "uname" });

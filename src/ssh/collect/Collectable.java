@@ -20,22 +20,6 @@ public interface Collectable {
 	public abstract void collect(Shell shell, final SSHClient ssh,
 			final Host h, final List<PortLoadConfig> portListFromLoad);
 	
-	abstract void collectHostDetail(Shell shell, SSHClient ssh, Host h,
-			List<PortLoadConfig> portListFromLoad);
-
-	abstract void collectOracle(Shell shell, Host h);
-
-	abstract void collectWeblogic(Shell shell, Host h,
-			List<PortLoadConfig> portListFromLoad);
-
-	abstract void collectDB2(Shell shell, Host h);
-	abstract void collectWebSphere(Shell shell, Host h,
-			List<PortLoadConfig> portListFromLoad);
-
-	abstract void collectTomcat(Shell shell, Host h,
-			List<PortLoadConfig> portListFromLoad);
-	abstract  void collectTongweb(Shell shell, Host h,
-			List<PortLoadConfig> portListFromLoad) ;
 
 
 }

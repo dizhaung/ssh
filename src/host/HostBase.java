@@ -38,6 +38,17 @@ public class HostBase {
 	
 	
 	private String os;
+
+	private int sshPort = 22;
+	
+	
+	public int getSshPort() {
+		return sshPort;
+	}
+	public void setSshPort(int sshPort) {
+		if(sshPort > 0)
+			this.sshPort = sshPort;
+	}
 	public String getOs() {
 		return os;
 	}

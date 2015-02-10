@@ -57,7 +57,7 @@ public class LoadBalancerCollector {
 						try {
 							logger.info("------"+lb.getIp()+"开始采集------");
 							
-							shell = new Shell(lb.getIp(), SSHClient.SSH_PORT,lb.getUserName(), lb.getPassword());
+							shell = new Shell(lb.getIp(), lb.getSshPort(),lb.getUserName(), lb.getPassword());
 							shell.setTimeout(10*1000);
 							
 							shell.setCommandLinePromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(shell.COMMAND_LINE_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));

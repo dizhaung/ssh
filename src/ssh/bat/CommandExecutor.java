@@ -52,12 +52,12 @@ public class CommandExecutor {
 						logger.info(h);
 		    			 
 		    			// 初始化服务器连接信息
-		    			SSHClient ssh = new SSHClient(h.getIp(), h.getJkUser(), h.getJkUserPassword());
+		    			SSHClient ssh = new SSHClient(h);
 	
 		    			// 建立连接
 		    			Shell shell;
 		    			try {
-		    				shell = new Shell(h.getIp(), SSHClient.SSH_PORT,h.getJkUser(), h.getJkUserPassword());
+		    				shell = new Shell(h.getIp(), h.getSshPort(),h.getJkUser(), h.getJkUserPassword());
 		    				shell.setTimeout(2*1000);
 		    				
 		    				logger.error("	连接到 	"+h.getIp());

@@ -2,6 +2,7 @@ package ssh;
 
 import host.FileManager;
 import host.Host;
+import host.HostBase;
 
 
 
@@ -46,23 +47,18 @@ public class SSHClient {
     private String[] commandLinePromptRegex = null;
     private Expect4j expect = null;
     private StringBuilder buffer = null;
-    private String userName;
-    private String password;
-    private String host;
+   
  
+    private HostBase host;
     public void setCommandLinePromptRegex(String[] commandLinePromptRegex){
     	this.commandLinePromptRegex = commandLinePromptRegex;
     }
     /**
      *
-     * @param host
-     * @param userName
-     * @param password
+     * @param host TODO
      */
-    public SSHClient(String host, String userName, String password) {
-        this.host = host;
-        this.userName = userName;
-        this.password = password;
+    public SSHClient(HostBase host) {
+    	this.host = host;
     }
    /**
     * 
@@ -168,10 +164,10 @@ public class SSHClient {
         JSch jsch = new JSch();
         
         try {
-			session = jsch.getSession(userName, host, SSH_PORT);
+			session = jsch.getSession(host.getJkUser(), host.getIp(), host.getSshPort());
 			
-	        if (password != null) {
-	            session.setPassword(password);
+	        if (host.getJkUserPassword() != null) {
+	            session.setPassword(host.getJkUserPassword());
 	        }
 	        Hashtable<String,String> config = new Hashtable<String,String>();
 	        config.put("StrictHostKeyChecking", "no");
