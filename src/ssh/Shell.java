@@ -3,6 +3,7 @@ package ssh;
 import host.FileManager;
 import host.Host;
 import host.Host.HostDetail;
+import host.HostBase;
 import host.LoadBalancer;
 
 import java.io.BufferedReader;
@@ -63,23 +64,15 @@ public class Shell {
     
     public static String[] errorMsg=new String[]{"could not acquire the config lock "};
     
-    private String ip;
-    private int port;
-    private String user;
-    private String password;
+  
+    private HostBase host;
     /**
      * 模拟终端
-     * @param ip
-     * @param port
-     * @param user
-     * @param password
+     * @param host TODO
      * @throws ShellException  创建Shell失败，可能的原因1.网络失败  2.用户名或者密码错误	3输入输出流获取失败	4Expect创建失败
      */
-    public Shell(String ip,int port,String user,String password) throws ShellException{
-        this.ip=ip;
-        this.port=port;
-        this.user=user;
-        this.password=password;
+    public Shell(HostBase host) throws ShellException{
+        this.host = host;
         login();
     }
     
@@ -111,6 +104,14 @@ public class Shell {
      * @throws Exception   连接主机失败
      */
     private void login() throws ShellException{
+    	if(host == null) {
+    		logger.error("host为null,无法登录");
+    		throw new ShellException("host为null,无法登录");
+    	}
+    	final   String ip = host.getIp();
+    	final   int port = host.getSshPort();
+    	final   String user = host.getJkUser();
+    	final   String password = host.getJkUserPassword();
         try {
             logger.debug(String.format("Start logging to %s@%s:%s",user,ip,port));
             JSch jsch = new JSch();

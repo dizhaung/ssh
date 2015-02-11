@@ -113,7 +113,7 @@ public class CollectActionServlet extends HttpServlet {
 		    			// 建立连接
 		    			Shell shell;
 		    			try {
-		    				shell = new Shell(h.getIp(), h.getSshPort(),h.getJkUser(), h.getJkUserPassword());
+		    				shell = new Shell(null);
 		    				shell.setTimeout(2*1000);
 		    				
 		    				logger.error("	连接到 	"+h.getIp());

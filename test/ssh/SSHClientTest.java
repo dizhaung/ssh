@@ -60,7 +60,7 @@ public class SSHClientTest {
 			Host h = it.next();
 			Shell shell = null;
 			try {
-				shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+				shell = new Shell(null);
 			} catch (ShellException e) {
 				// TODO Auto-generated catch block
 				
@@ -89,7 +89,7 @@ public class SSHClientTest {
 			Host h = it.next();
 			Shell shell = null;
 			try {
-				shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+				shell = new Shell(null);
 			} catch (ShellException e) {
 				// TODO Auto-generated catch block
 				
@@ -109,7 +109,7 @@ public class SSHClientTest {
 				Host h = it.next();
 				Shell shell = null;
 				try {
-					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+					shell = new Shell(null);
 				} catch (ShellException e) {
 					// TODO Auto-generated catch block
 					
@@ -128,7 +128,7 @@ public class SSHClientTest {
 				Host h = it.next();
 				Shell shell = null;
 				try {
-					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+					shell = new Shell(null);
 				} catch (ShellException e) {
 					// TODO Auto-generated catch block
 					
@@ -156,7 +156,7 @@ public class SSHClientTest {
 				Host h = it.next();
 				Shell shell = null;
 				try {
-					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+					shell = new Shell(null);
 				} catch (ShellException e) {
 					// TODO Auto-generated catch block
 					
@@ -174,7 +174,7 @@ public class SSHClientTest {
 				Host h = it.next();
 				Shell shell = null;
 				try {
-					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+					shell = new Shell(null);
 				} catch (ShellException e) {
 					// TODO Auto-generated catch block
 					
@@ -192,7 +192,7 @@ public class SSHClientTest {
 				Host h = it.next();
 				Shell shell = null;
 				try {
-					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+					shell = new Shell(null);
 				} catch (ShellException e) {
 					// TODO Auto-generated catch block
 					
@@ -211,7 +211,7 @@ public class SSHClientTest {
 				Host h = it.next();
 				Shell shell = null;
 				try {
-					shell = new Shell(h.getIp(), 22,h.getJkUser(), h.getJkUserPassword());
+					shell = new Shell(null);
 				} catch (ShellException e) {
 					// TODO Auto-generated catch block
 					

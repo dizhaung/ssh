@@ -1,6 +1,7 @@
 package ssh;
 
 import static org.junit.Assert.*;
+import host.HostBase;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -14,7 +15,11 @@ public class ShellTest {
 	@Test
 	public void testShell() {
 		 try {
-			Shell shell = new Shell("10.204.16.11",22,"root","1234qwer");
+			HostBase host = new HostBase();
+			host.setIp("10.204.16.11");
+			host.setJkUser("root");
+			host.setJkUserPassword("1234qwer");
+			Shell shell = new Shell(host);
 			shell.executeCommands(new String[]{"ls"});
 		} catch (ShellException e) {
 			// TODO Auto-generated catch block
