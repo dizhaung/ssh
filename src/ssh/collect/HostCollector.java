@@ -1,7 +1,10 @@
 package ssh.collect;
 
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -26,6 +29,34 @@ import constants.regex.Regex.CommonRegex;
 
 public  class HostCollector implements Collectable {
 	public static Log logger = LogFactory.getLog(HostCollector.class);
+	/**
+	 * 使用pattern从cmdResult获取应用根目录，委托于另一个方法
+	 * @param pattern     提取必要信息的正则
+	 * @param cmdResult   shell命名执行后返回的结果
+	 * @return
+	 */
+	public  Set<String> parseUserProjectSetByRegex(final Regex pattern, final String cmdResult) {
+		
+		return parseUserProjectSetByRegex(pattern.toString(),cmdResult);
+	}
+
+	/**
+	 * 使用pattern从cmdResult获取应用根目录
+	 * @param pattern     提取必要信息的模式
+	 * @param cmdResult   shell命名执行后返回的结果
+	 * @return
+	 */
+	public  Set<String> parseUserProjectSetByRegex(final String pattern, final String cmdResult) {
+		Set<String> userProjects = new HashSet();
+		//获取操作系统的类型
+		Matcher m = Pattern.compile(pattern).matcher(cmdResult);
+		while(m.find()){
+			userProjects.add( m.group(1));
+	
+		}
+		return userProjects;
+	}
+
 	/**
 	 * 提升为root权限
 	 * @param shell

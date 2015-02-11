@@ -101,7 +101,7 @@ public class SSHClient {
         	 */
         	
         try {
-			expect = SSH();
+			expect = createExpect();
 			
             boolean isSuccess = true;
             for(String strCmd : lstCmds) {
@@ -160,7 +160,7 @@ public class SSHClient {
      * @return
      * @throws ShellException 		shell创建和执行命令失败抛出异常   
      */
-    private Expect4j SSH() throws ShellException {
+    private Expect4j createExpect() throws ShellException {
         JSch jsch = new JSch();
         
         try {
@@ -175,8 +175,9 @@ public class SSHClient {
 	        config.put("PreferredAuthentications", 
 	                "publickey,keyboard-interactive,password");
 	        session.setConfig(config);
-	        session.connect(60000);
+	        session.connect();
 	        channel = (ChannelShell) session.openChannel("shell");
+	        //模拟Expect中   spawn ssh user@ip    命令
 	        expect = new Expect4j(channel.getInputStream(), channel.getOutputStream());
 	        expect.setDefaultTimeout(DEFAULT_TIMEOUT);
 	        channel.connect();

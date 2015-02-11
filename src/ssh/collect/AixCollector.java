@@ -941,7 +941,7 @@ public class AixCollector extends HostCollector {
 		logger.info(h.getIp()+"---weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains---");
 		 logger.info(h.getIp()+"正则表达式		"+Regex.AixRegex.WEBLOGIC_ROOT_DIR);
 		
-		 Set<String> appRootDirSet = shell.parseUserProjectSetByRegex(Regex.AixRegex.WEBLOGIC_ROOT_DIR,userProjectsDirSource);
+		 Set<String> appRootDirSet = parseUserProjectSetByRegex(Regex.AixRegex.WEBLOGIC_ROOT_DIR,userProjectsDirSource);
 		logger.info(h.getIp()+"　weblogic中的应用domain 文件夹路径 层次＝"+appRootDirSet);
 		
 		Map<String,Set<String>> appDomainMap = new HashMap();//key是 appRootDir应用根目录

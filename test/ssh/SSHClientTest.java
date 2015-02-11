@@ -35,12 +35,15 @@ import org.junit.Before;
 import org.junit.Test;
 
 import ssh.collect.AixCollector;
+import ssh.collect.HostCollector;
 import ssh.collect.LinuxCollector;
 
 public class SSHClientTest {
 	private static Host  host = new Host();
+	HostCollector collector  = null;
 	@Before
 	public void setUp() throws Exception {
+	 
 	}
 
 //	@Test
@@ -94,7 +97,7 @@ public class SSHClientTest {
 				continue;
 			}
 			shell.setTimeout(2*1000);
-			AixCollector.collectWebSphereForAIX(shell, h,new ArrayList());
+			collector.collectWebSphereForAIX(shell, h,new ArrayList());
 		}
 		
 		System.out.println(list);

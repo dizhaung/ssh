@@ -303,7 +303,7 @@ public class LinuxCollector extends HostCollector {
 					 
 					String jdkVersion = shell.parseInfoByRegex("java\\s+version\\s+\"([\\w.]+)\"",cmdResult,1);
 					mw.setJdkVersion(jdkVersion);
-					List<App> appList = searchServiceIpAndPortForEachOf(LinuxCollector.collectWeblogicAppListForLinux(shell, userProjectsDirSource,h), portListFromLoad);
+					List<App> appList = searchServiceIpAndPortForEachOf(collectWeblogicAppListForLinux(shell, userProjectsDirSource,h), portListFromLoad);
 					mw.setAppList(appList);
 				}
 			
@@ -916,10 +916,10 @@ public class LinuxCollector extends HostCollector {
 	 * @param userProjectsDirSource
 	 * @return
 	 */
-	public static List<Host.Middleware.App> collectWeblogicAppListForLinux(final Shell shell,final String userProjectsDirSource,final Host h){
+	public List<Host.Middleware.App> collectWeblogicAppListForLinux(final Shell shell,final String userProjectsDirSource,final Host h){
 		//应用名称及其部署路径
 		///找到weblogic中的应用domain 文件夹路径 层次 user_projects->domains->appName_domains
-		Set<String> appRootDirSet = shell.parseUserProjectSetByRegex("-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy",userProjectsDirSource);
+		Set<String> appRootDirSet = parseUserProjectSetByRegex("-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy",userProjectsDirSource);
 		
 		logger.info(h.getIp()+appRootDirSet);
 		logger.info(h.getIp()+"正则表达式		-Djava.security.policy=(/.+)/[\\w.]+/server/lib/weblogic.policy");
