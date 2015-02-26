@@ -193,7 +193,7 @@ public class Shell {
         Closure closure = new Closure() {
             public void run(ExpectState state) throws Exception {
             	//匹配到模式串的情况下，例如：#等等待输入命令的提示符时，输出执行的命令和返回的信息
-            	//System.out.println(expectState.getBuffer());
+            
                 buffer.append(state.getBuffer()); 
                 state.exp_continue();
             }
@@ -251,7 +251,7 @@ public class Shell {
 					@Override
 					public void run(ExpectState state) throws Exception {
 						// TODO Auto-generated method stub
-						logger.info("---expect 匹配到输出结束---");
+						logger.info("---expect 匹配到文件结束---");
 					}
                 	
                 }));
