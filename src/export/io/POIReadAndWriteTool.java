@@ -204,7 +204,6 @@ public class POIReadAndWriteTool {
         
         //打印数据库信息
         ///打印数据库标题
-         
         printTitleToSheet("数据库的基本信息",sheet);
         ///打印各种数据库
         printDatabasesInfo(host,sheet);
