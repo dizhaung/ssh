@@ -157,7 +157,18 @@ public class POIReadAndWriteTool {
             tr.add(allDbTypeAndVersionOf(host.getdList()));
             table.add(tr);
         }
-        printTableToSheet(table, sheet);
+        printTableToSheet(sheet,addThemeStyleTo(table,null));
+    }
+    class TableTheme {
+    	public CellStyle getCellStyle(final int i){
+        	CellStyle style = null;
+        	if(i%2 == 0){
+    			style = createEvenCellStyle();
+    		}else{
+    			style = createOddCellStyle();
+    		}
+        	return style;
+        }
     }
     public  void writeTinyHostListToSheet(final List<TinyHost> hostList,final Sheet sheet){
     	 //循环写入行数据  
@@ -239,6 +250,27 @@ public class POIReadAndWriteTool {
    	 style.setAlignment(CellStyle.ALIGN_CENTER);
        return style;
    }
+    private CellStyle createOddCellStyle(){ 
+     	 CellStyle style = wb.createCellStyle();
+     	 style.setFont(createTableFont());
+     	 
+     	 XSSFColor color = new XSSFColor(Color.decode("#ffffff"));
+     	 ((XSSFCellStyle)style).setFillForegroundColor(color);
+     	 ((XSSFCellStyle)style).setFillPattern(FillPatternType.SOLID_FOREGROUND);
+     	 style.setAlignment(CellStyle.ALIGN_CENTER);
+         return style;
+     }
+    private CellStyle createEvenCellStyle(){
+      	 CellStyle style = wb.createCellStyle();
+      	 style.setFont(createTableFont());
+      	 
+      	 XSSFColor color = new XSSFColor(Color.decode("#f8f8f8"));
+      	 ((XSSFCellStyle)style).setFillForegroundColor(color);
+      	 ((XSSFCellStyle)style).setFillPattern(FillPatternType.SOLID_FOREGROUND);
+      	 style.setAlignment(CellStyle.ALIGN_CENTER);
+          return style;
+      }
+    
     /**
      * 打印数据库信息
      * @author HP
@@ -339,11 +371,11 @@ public class POIReadAndWriteTool {
     	printTableToSheet(host.revserseServerBaseInfo(),sheet);
     	
     	//打印网口类型表格
-    	 if(detail != null)
-    		 printTableToSheet(detail.reverseCardListToTable(),sheet);
+    	if(detail != null)
+    		printTableToSheet(detail.reverseCardListToTable(),sheet);
     	 
     	//打印磁盘类型表格
-    	 if(detail != null)
+    	if(detail != null)
     		 printTableToSheet( detail.reverseFsListToTable(),sheet);
     }
     private  int currentRowNum = -1;
@@ -367,16 +399,40 @@ public class POIReadAndWriteTool {
      * @return 表格结束行号
      */
     public  void printTableToSheet(final List<List<String>> table,final Sheet sheet){
-    	printTableToSheet(table,sheet,null);
+    	
+    	printTableToSheet(sheet,addThemeStyleTo(table,null));
     }
-    public  void printTableToSheet(final List<List<String>> table,final Sheet sheet,final List<List<StyledCell>> styledTable){
-    	for(List<String> tr:table){
+    private List<List<StyledCell>> addThemeStyleTo(final List<List<String>> table,final TableTheme theme){
+    	List<List<StyledCell>> styledTable = new LinkedList();
+    	for(int i = 0,rowNum = table.size();i < rowNum;i++){
+    		
+    		List<StyledCell> styledTr = new LinkedList();
+    		List<String> tr = table.get(i);
+    		CellStyle style = getCellStyle(i);
+    		
+    		for(int j = 0,colNum = tr.size();j < colNum;j++){
+    			styledTr.add(new StyledCell(tr.get(j),style,i,j));
+    		}
+    		styledTable.add(styledTr);
+    	}
+    	return styledTable;
+    }
+    private CellStyle getCellStyle(final int i){
+    	CellStyle style = null;
+    	if(i%2 == 0){
+			style = createEvenCellStyle();
+		}else{
+			style = createOddCellStyle();
+		}
+    	return style;
+    }
+    public  void printTableToSheet(final Sheet sheet,final List<List<StyledCell>> styledTable){
+    	for(List<StyledCell> tr:styledTable){
 			Row row = (Row) sheet.createRow(nextRowNum());
 			for (int i = 0, length = tr.size(); i < length; i++) {
-				StyledCell styledCell = new StyledCell(tr.get(i),
-						createTableCellStyle(),   row, i);
+				StyledCell styledCell = tr.get(i);
 				sheet.autoSizeColumn(styledCell.getCellNum());
-				Cell cell = styledCell.getRow().createCell(
+				Cell cell = row.createCell(
 						styledCell.getCellNum());
 				cell.setCellValue(styledCell.getContent());
 				cell.setCellStyle(styledCell.getStyle());
@@ -384,32 +440,7 @@ public class POIReadAndWriteTool {
     	}
     	 
     }
-    /**
-     * 
-     * @param rowNum    例如： 1代表第一行
-     * @param itemList
-     * @param sheet
-     */
-    public  void printServerBaseInfoRowToSheet(final int rowNum,final List<String> itemList,final Sheet sheet){
-    	//按列表顺序打印到行
-    	Row row = (Row) sheet.createRow(rowNum);	
-    	 for(int i = 0,length = itemList.size();i<length;i++){
-    		 printServerBaseInfoItemToRow(new StyledCell(itemList.get(i),createTableCellStyle(), row,i),sheet);
-    	}
-    }
     
-    /**
-     * 打印服务器基本信息项目       每一项一个小指标 例如：主机IP：10.10.10.10
-     * @param cellNum  单元格位置   1代表第一个单元格
-     * @param cellValue
-     * @param row
-     */
-    public  void printServerBaseInfoItemToRow(StyledCell styledCell,Sheet sheet){
-    	sheet.autoSizeColumn(styledCell.getCellNum());
-        Cell cell = styledCell.getRow().createCell(styledCell.getCellNum());  
-        cell.setCellValue(styledCell.getContent());
-        cell.setCellStyle(styledCell.getStyle());
-    }
     public  void read(String path,String fileName,String fileType) throws IOException  
     {  
         InputStream stream = new FileInputStream(path+fileName+"."+fileType);  
