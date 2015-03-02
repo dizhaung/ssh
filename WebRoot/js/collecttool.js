@@ -16,11 +16,8 @@ var CollectTool = (function(){
 		exportFileFrom:function(url){
 			this.disableButtons(url.buttonIds);//禁用导出按钮
 			$.get(url.url,function(data){
-				 	console.log(data);
 				$('#exportIframe').attr('src',data);
-				
 			});
-		 
 			this.enableButtons(url.buttonIds);
 		},
 		'disableButtons':function(buttonIds){
