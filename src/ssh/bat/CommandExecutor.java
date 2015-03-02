@@ -57,7 +57,7 @@ public class CommandExecutor {
 		    			// 建立连接
 		    			Shell shell;
 		    			try {
-		    				shell = new Shell(null);
+		    				shell = new Shell(h);
 		    				shell.setTimeout(2*1000);
 		    				
 		    				logger.error("	连接到 	"+h.getIp());
