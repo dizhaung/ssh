@@ -211,7 +211,7 @@ public class SSHClientTest {
 				Host h = it.next();
 				Shell shell = null;
 				try {
-					shell = new Shell(null);
+					shell = new Shell(h);
 				} catch (ShellException e) {
 					// TODO Auto-generated catch block
 					

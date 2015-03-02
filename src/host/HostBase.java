@@ -42,6 +42,16 @@ public class HostBase {
 	private int sshPort = 22;
 	
 	
+	public HostBase() {
+		super();
+	}
+	public HostBase(String ip, int sshPort, String jkUser, String jkUserPassword) {
+		super();
+		this.ip = ip;
+		this.jkUser = jkUser;
+		this.jkUserPassword = jkUserPassword;
+		this.sshPort = sshPort;
+	}
 	public int getSshPort() {
 		return sshPort;
 	}

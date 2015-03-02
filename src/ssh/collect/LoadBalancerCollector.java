@@ -2,6 +2,7 @@ package ssh.collect;
 
 import host.FileManager;
 import host.Host;
+import host.HostBase;
 import host.LoadBalancer;
 import host.PortLoadConfig;
 
@@ -57,7 +58,7 @@ public class LoadBalancerCollector {
 						try {
 							logger.info("------"+lb.getIp()+"开始采集------");
 							
-							shell = new Shell(null);
+							shell = new Shell(new HostBase(lb.getIp(),lb.getSshPort(),lb.getUserName(),lb.getPassword()));
 							shell.setTimeout(10*1000);
 							
 							shell.setCommandLinePromptRegex(shell.getPromptRegexArrayByTemplateAndSpecificRegex(shell.COMMAND_LINE_PROMPT_REGEX_TEMPLATE,new String[]{"--More--","peer#"}));
