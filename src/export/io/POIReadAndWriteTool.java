@@ -31,6 +31,8 @@ import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import export.io.spreadsheet.excel.TableTheme;
+
 
 public class POIReadAndWriteTool {
 	private static POIReadAndWriteTool instance = null;
@@ -103,22 +105,7 @@ public class POIReadAndWriteTool {
         font.setBoldweight(Font.BOLDWEIGHT_BOLD);
         return font;  
     }  
-    /** 
-     * 创建标题单元格的字体 
-     * @param wb 
-     * @return 
-     */  
-    public Font createTableFont(){  
-        //创建Font对象  
-        Font font = wb.createFont();  
-        //设置字体  
-        font.setFontName("宋体");  
-        //着色  
-        font.setColor(HSSFColor.BLACK.index);  
-        //字体大小  
-        font.setFontHeightInPoints((short)16);  
-        return font;  
-    } 
+    
     /**
      * 每一个主机的信息在工作簿中占一个工作表
      * @author HP
@@ -157,19 +144,9 @@ public class POIReadAndWriteTool {
             tr.add(allDbTypeAndVersionOf(host.getdList()));
             table.add(tr);
         }
-        printTableToSheet(sheet,addThemeStyleTo(table,null));
+        printTableToSheet(sheet,addTableThemeStyleTo(table,new TableTheme.GrayHeaderWhiteBody(wb)));
     }
-    class TableTheme {
-    	public CellStyle getCellStyle(final int i){
-        	CellStyle style = null;
-        	if(i%2 == 0){
-    			style = createEvenCellStyle();
-    		}else{
-    			style = createOddCellStyle();
-    		}
-        	return style;
-        }
-    }
+
     public  void writeTinyHostListToSheet(final List<TinyHost> hostList,final Sheet sheet){
     	 //循环写入行数据  
         int i = 1;
@@ -240,37 +217,7 @@ public class POIReadAndWriteTool {
     	 style.setAlignment(CellStyle.ALIGN_CENTER);
         return style;
     }
-    private CellStyle createTableCellStyle(){
-   	 CellStyle style = wb.createCellStyle();
-   	 style.setFont(createTableFont());
-   	 
-   	 XSSFColor color = new XSSFColor(Color.decode("#ccc"));
-   	 ((XSSFCellStyle)style).setFillForegroundColor(color);
-   	 ((XSSFCellStyle)style).setFillPattern(FillPatternType.SOLID_FOREGROUND);
-   	 style.setAlignment(CellStyle.ALIGN_CENTER);
-       return style;
-   }
-    private CellStyle createOddCellStyle(){ 
-     	 CellStyle style = wb.createCellStyle();
-     	 style.setFont(createTableFont());
-     	 
-     	 XSSFColor color = new XSSFColor(Color.decode("#ffffff"));
-     	 ((XSSFCellStyle)style).setFillForegroundColor(color);
-     	 ((XSSFCellStyle)style).setFillPattern(FillPatternType.SOLID_FOREGROUND);
-     	 style.setAlignment(CellStyle.ALIGN_CENTER);
-         return style;
-     }
-    private CellStyle createEvenCellStyle(){
-      	 CellStyle style = wb.createCellStyle();
-      	 style.setFont(createTableFont());
-      	 
-      	 XSSFColor color = new XSSFColor(Color.decode("#f8f8f8"));
-      	 ((XSSFCellStyle)style).setFillForegroundColor(color);
-      	 ((XSSFCellStyle)style).setFillPattern(FillPatternType.SOLID_FOREGROUND);
-      	 style.setAlignment(CellStyle.ALIGN_CENTER);
-          return style;
-      }
-    
+   
     /**
      * 打印数据库信息
      * @author HP
@@ -400,15 +347,15 @@ public class POIReadAndWriteTool {
      */
     public  void printTableToSheet(final List<List<String>> table,final Sheet sheet){
     	
-    	printTableToSheet(sheet,addThemeStyleTo(table,null));
+    	printTableToSheet(sheet,addTableThemeStyleTo(table,new TableTheme.GrayWhite(wb)));
     }
-    private List<List<StyledCell>> addThemeStyleTo(final List<List<String>> table,final TableTheme theme){
+    private List<List<StyledCell>> addTableThemeStyleTo(final List<List<String>> table,final TableTheme theme){
     	List<List<StyledCell>> styledTable = new LinkedList();
     	for(int i = 0,rowNum = table.size();i < rowNum;i++){
     		
     		List<StyledCell> styledTr = new LinkedList();
     		List<String> tr = table.get(i);
-    		CellStyle style = getCellStyle(i);
+    		CellStyle style = theme.getCellStyle(i);
     		
     		for(int j = 0,colNum = tr.size();j < colNum;j++){
     			styledTr.add(new StyledCell(tr.get(j),style,i,j));
@@ -417,15 +364,7 @@ public class POIReadAndWriteTool {
     	}
     	return styledTable;
     }
-    private CellStyle getCellStyle(final int i){
-    	CellStyle style = null;
-    	if(i%2 == 0){
-			style = createEvenCellStyle();
-		}else{
-			style = createOddCellStyle();
-		}
-    	return style;
-    }
+    
     public  void printTableToSheet(final Sheet sheet,final List<List<StyledCell>> styledTable){
     	for(List<StyledCell> tr:styledTable){
 			Row row = (Row) sheet.createRow(nextRowNum());
@@ -438,7 +377,6 @@ public class POIReadAndWriteTool {
 				cell.setCellStyle(styledCell.getStyle());
 			}
     	}
-    	 
     }
     
     public  void read(String path,String fileName,String fileType) throws IOException  
@@ -464,18 +402,20 @@ public class POIReadAndWriteTool {
         }  
     }  
     public static void main(String[] args) throws IOException {}   
- /**
-  * 取得文件格式。
-  * <p>
-  * 该方法取得文件名最后一个"."所在的位置，然后返回该位置后的字符串。
-  * </p>
-  * 
-  * @param fileName 文件名
-  * @return String 文件格式
-  */
- private String getFileFormat(String fileName) {
-     int dotIndex = fileName.lastIndexOf('.');
-     return dotIndex == -1 ? null : fileName.substring(dotIndex + 1);
- }
+
+	/**
+	 * 取得文件格式。
+	 * <p>
+	 * 该方法取得文件名最后一个"."所在的位置，然后返回该位置后的字符串。
+	 * </p>
+	 * 
+	 * @param fileName
+	 *            文件名
+	 * @return String 文件格式
+	 */
+	private String getFileFormat(String fileName) {
+		int dotIndex = fileName.lastIndexOf('.');
+		return dotIndex == -1 ? null : fileName.substring(dotIndex + 1);
+	}
 }
  
