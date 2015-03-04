@@ -182,7 +182,9 @@ public class POIReadAndWriteTool {
     	StringBuffer typeAndVersion = new StringBuffer("");
     	for(int i = 0,size = dbList.size();i < size;i++){
     		Database db = dbList.get(i);
-    		typeAndVersion.append(db.getType()).append(",").append(db.getVersion());
+    		typeAndVersion.append(db.getType())
+    		.append(",")
+    		.append(db.getVersion());
     		if((i+1)<size)	typeAndVersion.append(",");
     	}
     	return typeAndVersion.toString();
