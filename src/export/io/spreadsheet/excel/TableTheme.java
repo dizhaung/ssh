@@ -133,7 +133,7 @@ public abstract class TableTheme {
 	}
 	protected final Workbook wb;
 	
-	public TableTheme(Workbook wb) {
+	protected TableTheme(Workbook wb) {
 		super();
 		this.wb = wb;
 	}
