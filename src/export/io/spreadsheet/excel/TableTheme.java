@@ -10,7 +10,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFColor;
 
-public class TableTheme {
+public abstract class TableTheme {
 	public final static  class GrayWhite extends TableTheme	{
 
 		public GrayWhite(Workbook wb) {
@@ -19,22 +19,50 @@ public class TableTheme {
 		}
 
 		@Override
-		protected CellStyle createCellStyleOfTableOddRow() {
-			// TODO Auto-generated method stub
-			return super.createCellStyleOfTableOddRow();
-		}
-
-		@Override
-		protected CellStyle createCellStyleOfTableEvenRow() {
-			// TODO Auto-generated method stub
-			return super.createCellStyleOfTableEvenRow();
-		}
-
-		@Override
-		protected Font createTableFont() {
-			// TODO Auto-generated method stub
-			return super.createTableFont();
-		}
+		public CellStyle getCellStyle(final int i){
+	    	CellStyle style = null;
+	    	if(i%2 == 0){
+				style = createCellStyleOfTableEvenRow();
+			}else{
+				style = createCellStyleOfTableOddRow();
+			}
+	    	return style;
+	    }
+		 private CellStyle createCellStyleOfTableOddRow(){ 
+	     	 CellStyle style = wb.createCellStyle();
+	     	 style.setFont(createTableFont());
+	     	 XSSFColor color = new XSSFColor(Color.decode("#ffffff"));
+	     	 ((XSSFCellStyle)style).setFillForegroundColor(color);
+	     	 ((XSSFCellStyle)style).setFillPattern(FillPatternType.SOLID_FOREGROUND);
+	     	 style.setAlignment(CellStyle.ALIGN_CENTER);
+	         return style;
+	    }
+	    private CellStyle createCellStyleOfTableEvenRow(){
+	      	 CellStyle style = wb.createCellStyle();
+	      	 style.setFont(createTableFont());
+	      	 
+	      	 XSSFColor color = new XSSFColor(Color.decode("#cccccc"));
+	      	 ((XSSFCellStyle)style).setFillForegroundColor(color);
+	      	 ((XSSFCellStyle)style).setFillPattern(FillPatternType.SOLID_FOREGROUND);
+	      	 style.setAlignment(CellStyle.ALIGN_CENTER);
+	          return style;
+	      }
+	    /** 
+	     * 创建标题单元格的字体 
+	     * @param wb 
+	     * @return 
+	     */  
+	    private Font createTableFont(){  
+	        //创建Font对象  
+	        Font font = wb.createFont();  
+	        //设置字体  
+	        font.setFontName("宋体");  
+	        //着色  
+	        font.setColor(HSSFColor.BLACK.index);  
+	        //字体大小  
+	        font.setFontHeightInPoints((short)12);  
+	        return font;  
+	    } 
 		
 	}
 	public final static  class GrayHeaderWhiteBody extends TableTheme	{
@@ -59,7 +87,7 @@ public class TableTheme {
 	     * @param wb 
 	     * @return 
 	     */  
-	    public Font createTableHeaderFont(){  
+	    private Font createTableHeaderFont(){  
 	        //创建Font对象  
 	        Font font = wb.createFont();  
 	        //设置字体  
@@ -72,7 +100,7 @@ public class TableTheme {
 	        return font;  
 	    }  
 	    
-	    public Font createTableBodyFont(){  
+	    private Font createTableBodyFont(){  
 	        //创建Font对象  
 	        Font font = wb.createFont();  
 	        //设置字体  
@@ -105,52 +133,10 @@ public class TableTheme {
 	}
 	protected final Workbook wb;
 	
-	public TableTheme(Workbook wb) {
+	protected TableTheme(Workbook wb) {
 		super();
 		this.wb = wb;
 	}
-	public CellStyle getCellStyle(final int i){
-    	CellStyle style = null;
-    	if(i%2 == 0){
-			style = createCellStyleOfTableEvenRow();
-		}else{
-			style = createCellStyleOfTableOddRow();
-		}
-    	return style;
-    }
-	 protected CellStyle createCellStyleOfTableOddRow(){ 
-     	 CellStyle style = wb.createCellStyle();
-     	 style.setFont(createTableFont());
-     	 XSSFColor color = new XSSFColor(Color.decode("#ffffff"));
-     	 ((XSSFCellStyle)style).setFillForegroundColor(color);
-     	 ((XSSFCellStyle)style).setFillPattern(FillPatternType.SOLID_FOREGROUND);
-     	 style.setAlignment(CellStyle.ALIGN_CENTER);
-         return style;
-    }
-    protected CellStyle createCellStyleOfTableEvenRow(){
-      	 CellStyle style = wb.createCellStyle();
-      	 style.setFont(createTableFont());
-      	 
-      	 XSSFColor color = new XSSFColor(Color.decode("#cccccc"));
-      	 ((XSSFCellStyle)style).setFillForegroundColor(color);
-      	 ((XSSFCellStyle)style).setFillPattern(FillPatternType.SOLID_FOREGROUND);
-      	 style.setAlignment(CellStyle.ALIGN_CENTER);
-          return style;
-      }
-    /** 
-     * 创建标题单元格的字体 
-     * @param wb 
-     * @return 
-     */  
-    protected Font createTableFont(){  
-        //创建Font对象  
-        Font font = wb.createFont();  
-        //设置字体  
-        font.setFontName("宋体");  
-        //着色  
-        font.setColor(HSSFColor.BLACK.index);  
-        //字体大小  
-        font.setFontHeightInPoints((short)12);  
-        return font;  
-    } 
+	public abstract CellStyle getCellStyle(final int i);
+    	
 }
