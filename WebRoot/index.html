@@ -1,219 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>主机信息采集页</title>
-
-    <!-- Bootstrap -->
-    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- 控制进度条等样式 -->
-	<link href="css/style.css"   rel="stylesheet"/>
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-      <script src="js/html5css3comp/html5shiv.min.js"></script>
-      <script src="js/html5css3comp/respond/1.4.2/respond.min.js"></script>
-    <![endif]-->
-  </head>
-  <body>
-  	<div class="container">
-  	 
-  	 	<div class="page-header page-header-fix">
-	   		<h1 class="page-header-title">
-	   		<div class="row">
-	   		 	<div class="col-sm-2">
-	   		 		 <img src="image/logo.gif" alt="山西移动"/> 
-	   		 	</div>
-	   		 	<div class="col-sm-1"></div>
-	   			<div class="col-sm-9">
-	   				 轻量化的业务系统运行环境信息采集和处理工具
-	   			 </div>	
-	  			
-	  		</div>		 
-		 	</h1>
-		 </div>
- 
-		<div class="row">
-			<div class="col-sm-1"><button id="poll" class="btn  btn-default btn-block" type="button">执&nbsp;&nbsp;行</button></div>
-			 <div class="col-sm-8"></div>
-			 <div class="col-sm-2">
-		 		 <input type="checkbox" checked id="autoChkbox" />是否自动导出 
-		 	</div>
-			 <div class="col-sm-1">
-				 <button id="export" class="btn  btn-default  btn-block" type="button">导&nbsp;&nbsp;出</button>
-			 </div>
-			 
-	  	  
-		</div>
-		<div class="row">
-			 
-				<div class="progress">
-					<div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;">采集进度</div>
-				</div>
-				
-			 
-		</div>
-    	<div class="row">
-    		<table class="table table-bordered sortable">
-              <thead>
-                <tr class="table-head">
-                  <th>序&nbsp;号</th>
-                  <th>业务系统</th>
-                  <th>主机名</th>
-                  <th>服务器类型</th>
-                  <th>IP地址</th>
-                  <th>操作系统</th>
-                  <th>是否负载均衡</th>
-                  <th>是否双机</th>
-                  <th>应用系统个数</th>
-                  <th>数据库</th>
-                  	<th>详细信息</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                    <td>1</td><td>b</td><td>c</td> <td>d</td><td>f</td><td>333</td><td></td><td>h</td><td>h</td><td>t</td><td>h</td>
-                </tr>
-             <tr>
-                    <td>2</td><td>a</td><td>c</td> <td>d</td><td>f</td><td>222</td><td></td><td>h</td><td>h</td><td>t</td><td>h</td>
-                </tr>
-
-                 <tr>
-                    <td>3</td><td>g</td><td>c</td> <td>d</td><td>f</td><td>123</td><td></td><td>h</td><td>h</td><td>t</td><td>h</td>
-                </tr>   
-              </tbody>
-       		 </table>
-    	</div>
-	
-  	 
-    </div><!-- 行结束 -->
-    
-    
-    <iframe src="" style="display:none;" id="exportIframe"></iframe>
-    <!-- DWR -->
-    <script type="text/javascript" src="dwr/util.js"></script>    
-	<script type="text/javascript" src="dwr/engine.js"></script> 
-	<!-- 页面推环境初始化 -->
-	<script type="text/javascript" src="dwr/interface/DWRContexInitor.js"></script>
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="jquery/jquery-1.11.1.js"></script>
-    <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script src="bootstrap/js/bootstrap.min.js"></script>
-    <script src="js/json/json_parse.js"></script>
-    
-    <script src="js/collecttool.js"></script>
-    <script type="text/javascript" src="js/sorttable.js"></script>
-    <script type="text/javascript">
-	   
-    	
-		//实时显示采集进度
-		function show(msg){  
-			console.log(msg);
-			msg = JSON.parse(msg);
-			 
-		   var progressBar =  $("#progressBar");
-		   var progressBarLabel = progressBar;
-		   progressBarLabel.text(msg.msg+msg.nowNum+"/"+msg.maxNum+"		"+msg.ip); 
-		   msg.maxNum == 0?progressBar.css('width','100%'):progressBar.css('width',msg.nowNum/msg.maxNum*100+'%')
-		}  
-    	$(document).ready(function(){
-    		
-    		 //表示允许使用推送技术  
-	        dwr.engine.setActiveReverseAjax(true); 
-	        CollectTool.toggleAutoBind('#autoChkbox');
-    		$('#poll').click(function(){
-    			
-    			var that = this;
-    			
-    			//单击执行按钮进入采集过程，这个过程中所有按钮不能操作
-    			CollectTool.disableButtons(['#collect','#export']);
-    			//将上一次采集到的主机表格清空
-    			var tBody = $('table tbody');
-    			tBody.html('');
-
-    			$.post('/ssh/collect',function(data){
-    				data = JSON.parse(data);
-    				/**
-    				* 主机无法采集的情况下，detail为null 
-    				 	 各要显示的主机详情项单元格显示"未知"
-    				*/
-    				function detailDot(pName,detail){
-    					return detail?detail[pName]:"未知";
-    				}
-    				/**
-    				*	计算中间件数量
-    				*/
-    				function appCountOf(middlewares){
-    					var count = 0;
-    					for(var i = 0,size = middlewares.length;i < size;i++){
-    						count += middlewares[i].appList.length;
-    					}
-    					return count;
-    				}
-    				
-    				function	allDbTypeAndVersionOf(dList){
-    					var typeAndVersion = "";
-    					if(dList.length == 0 ) typeAndVersion = "无";
-    					for(var i = 0,size = dList.length;i<size;i++){
-    						typeAndVersion += dList[i].type+" "+dList[i].version;
-    						if((i+1) < size)		typeAndVersion += ',';//不是最后一数据库		
-    					}
-    					return typeAndVersion;
-    				}
-    				if(data.length > 0 ){   //采集之后并且有服务器被采集
-    					//显示采集到的服务器列表
-    					for(var i = 0;i<data.length;i++){
-        					var tr = $('<tr></tr>');
-        					tr.appendTo(tBody);
-        					
-        					$('<td></td>').text(i+1).appendTo(tr);//序号
-        					
-        					$('<td></td>').text(data[i].buss).appendTo(tr);//业务名称
-        					$('<td></td>').text(detailDot("hostName",data[i].detail)).appendTo(tr);//主机名
-        					$('<td></td>').text((data[i].dList.length>0?'数据库服务器':'')+' '+(data[i].mList.length>0?'应用服务器':'')).appendTo(tr);//类型（数据库服务器or应用服务器）
-        					
-        					$('<td></td>').text(data[i].ip).appendTo(tr);//IP
-        					$('<td></td>').text(data[i].os?data[i].os:"未知").appendTo(tr);	//操作系统 
-        					
-        					$('<td></td>').text(detailDot("isLoadBalanced",data[i].detail)).appendTo(tr);//是否负载均衡
-        					$('<td></td>').text(detailDot("isCluster",data[i].detail)).appendTo(tr);//是否双机
-        					$('<td></td>').text(appCountOf(data[i].mList)).appendTo(tr);//应用系统个数
-        					$('<td></td>').text(allDbTypeAndVersionOf(data[i].dList)).appendTo(tr);//各个数据库名称及版本
-        					
-        					
-        					$('<td></td>').html('<a target="_blank" href="hostdetail?ip='+data[i].ip+'">详细信息</a>').appendTo(tr);//详细信息
-            				
-        					
-        				}
-    					if(CollectTool.isAutoExport()){
-    				 		//下载文件
-    						CollectTool.exportFileFrom({
-    							url:'/ssh/export',
-    							buttonIds:['#collect','#export']
-    						});
-    					}
-    					
-    				}else{//没有服务器被采集  不导出文件  后续可添加提示或其他操作
-						
-    				}
-    				
-    				//采集完毕，恢复按钮
-    				CollectTool.enableButtons(['#export','#collect']);
-    			});
-    		});
-    		
-    		//导出采集到的主机信息到文件
-    		var exportButton  = $('#export').click(function(){
-    			//下载文件
-				CollectTool.exportFileFrom({
-					url:'/ssh/export',
-					buttonIds:['#collect','#export']
-				});
-    		});
-    	
-    	});
-    </script>
-  </body>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>主机信息采集页</title>
+        <!-- Bootstrap -->
+        <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+        <!-- 控制进度条等样式 -->
+        <link href="css/style.css"   rel="stylesheet"/>
+        <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="js/html5css3comp/html5shiv.min.js"></script>
+        <script src="js/html5css3comp/respond/1.4.2/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <body>
+        <div class="container">
+            
+            <div class="page-header page-header-fix">
+                <h1 class="page-header-title">
+                <div class="row">
+                    <div class="col-sm-2">
+                        <img src="image/logo.gif" alt="山西移动"/>
+                    </div>
+                    <div class="col-sm-1"></div>
+                    <div class="col-sm-9">
+                        轻量化的业务系统运行环境信息采集和处理工具
+                    </div>
+                    
+                </div>
+                </h1>
+            </div>
+            
+            <div class="row">
+                <div class="col-sm-1"><button id="poll" class="btn  btn-default btn-block" type="button">执&nbsp;&nbsp;行</button></div>
+                <div class="col-sm-8"></div>
+                <div class="col-sm-2">
+                    <input type="checkbox" checked id="autoChkbox" />是否自动导出
+                </div>
+                <div class="col-sm-1">
+                    <button id="export" class="btn  btn-default  btn-block" type="button">导&nbsp;&nbsp;出</button>
+                </div>
+                
+                
+            </div>
+            <div class="row">
+                
+                <div class="progress">
+                    <div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;">采集进度</div>
+                </div>
+                
+                
+            </div>
+            <div id="collectresult" class="row">
+                <table class="table table-bordered sortable">
+                    <thead>
+                        <tr class="table-head">
+                            <th>序&nbsp;号</th>
+                            <th>业务系统</th>
+                            <th>主机名</th>
+                            <th>服务器类型</th>
+                            <th>IP地址</th>
+                            <th>操作系统</th>
+                            <th>是否负载均衡</th>
+                            <th>是否双机</th>
+                            <th>应用系统个数</th>
+                            <th>数据库</th>
+                            <th>详细信息</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                    </tbody>
+                </table>
+            </div>
+        
+            
+            </div><!-- 行结束 -->
+            
+            
+            <iframe src="" style="display:none;" id="exportIframe"></iframe>
+            <!-- DWR -->
+            <script type="text/javascript" src="dwr/util.js"></script>
+            <script type="text/javascript" src="dwr/engine.js"></script>
+            <!-- 页面推环境初始化 -->
+            <script type="text/javascript" src="dwr/interface/DWRContexInitor.js"></script>
+            <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+            <script src="jquery/jquery-1.11.1.js"></script>
+            <!-- Include all compiled plugins (below), or include individual files as needed -->
+            <script src="bootstrap/js/bootstrap.min.js"></script>
+            <script src="js/json/json_parse.js"></script>
+            
+            <script src="js/collecttool.js"></script>
+            <script type="text/javascript" src="js/sorttable.js"></script>
+            <script type="text/javascript" src="js/collect.js"></script>
+            <script type="text/javascript" src="js/paging.js"></script>
+    </body>
 </html>
