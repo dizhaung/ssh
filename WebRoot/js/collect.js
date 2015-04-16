@@ -1,6 +1,6 @@
  //实时显示采集进度
  function show(msg) {
-     console.log(msg);
+     
      msg = JSON.parse(msg);
 
      var progressBar = $("#progressBar");
@@ -12,7 +12,7 @@
 
      //表示允许使用推送技术
      dwr.engine.setActiveReverseAjax(true);
-     CollectTool.toggleAutoBind('#autoChkbox');
+     CollectTool.toggleAutoBind('#autoExport');
      $('#poll').click(function() {
 
          var that = this;
@@ -24,8 +24,8 @@
          $tbody.empty();
          //去掉分页组件
          PagingTool.removePagingTags();
-         $.post('/ssh/collect', function(data) {
-             data = JSON.parse(data);
+         $.post('/ssh/collect', function(data, textStatus) {
+
              /**
              * 主机无法采集的情况下，detail为null
              各要显示的主机详情项单元格显示"未知"
@@ -53,33 +53,34 @@
                  }
                  return typeAndVersion;
              }
+
              if (data.length > 0) { //采集之后并且有服务器被采集
                  //显示采集到的服务器列表
-                 for (var i = 0; i < data.length; i++) {
-                     var tr = $('<tr></tr>');
-                     tr.appendTo($tbody);
+                 $(data).each(function(index, el) {
+                     var $tr = $('<tr></tr>');
+                     $tr.appendTo($tbody);
 
-                     $('<td></td>').text(i + 1).appendTo(tr); //序号
+                     $('<td></td>').text(index + 1).appendTo($tr); //序号
 
-                     $('<td></td>').text(data[i].buss).appendTo(tr); //业务名称
-                     $('<td></td>').text(detailDot("hostName", data[i].detail)).appendTo(tr); //主机名
-                     $('<td></td>').text((data[i].dList.length > 0 ? '数据库服务器' : '') + ' ' + (data[i].mList.length > 0 ? '应用服务器' : '')).appendTo(tr); //类型（数据库服务器or应用服务器）
+                     $('<td></td>').text(el.buss).appendTo($tr); //业务名称
+                     $('<td></td>').text(detailDot("hostName", el.detail)).appendTo($tr); //主机名
+                     $('<td></td>').text((el.dList.length > 0 ? '数据库服务器' : '') + ' ' + (el.mList.length > 0 ? '应用服务器' : '')).appendTo($tr); //类型（数据库服务器or应用服务器）
 
-                     $('<td></td>').text(data[i].ip).appendTo(tr); //IP
-                     $('<td></td>').text(data[i].os ? data[i].os : "未知").appendTo(tr); //操作系统
+                     $('<td></td>').text(el.ip).appendTo($tr); //IP
+                     $('<td></td>').text(el.os ? el.os : "未知").appendTo($tr); //操作系统
 
-                     $('<td></td>').text(detailDot("isLoadBalanced", data[i].detail)).appendTo(tr); //是否负载均衡
-                     $('<td></td>').text(detailDot("isCluster", data[i].detail)).appendTo(tr); //是否双机
-                     $('<td></td>').text(appCountOf(data[i].mList)).appendTo(tr); //应用系统个数
-                     $('<td></td>').text(allDbTypeAndVersionOf(data[i].dList)).appendTo(tr); //各个数据库名称及版本
-
-
-                     $('<td></td>').html('<a target="_blank" href="hostdetail?ip=' + data[i].ip + '">详细信息</a>').appendTo(tr); //详细信息
+                     $('<td></td>').text(detailDot("isLoadBalanced", el.detail)).appendTo($tr); //是否负载均衡
+                     $('<td></td>').text(detailDot("isCluster", el.detail)).appendTo($tr); //是否双机
+                     $('<td></td>').text(appCountOf(el.mList)).appendTo($tr); //应用系统个数
+                     $('<td></td>').text(allDbTypeAndVersionOf(el.dList)).appendTo($tr); //各个数据库名称及版本
 
 
-                 }
+                     $('<td></td>').html('<a target="_blank" href="hostdetail?ip=' + el.ip + '">详细信息</a>').appendTo($tr); //详细信息
+
+
+                 });
                  //分页显示
-                 PagingTool.paging();
+                 PagingTool.pagingWithPageNumber();
                  if (CollectTool.isAutoExport()) {
                      //下载文件
                      CollectTool.exportFileFrom({
@@ -94,7 +95,7 @@
 
              //采集完毕，恢复按钮
              CollectTool.enableButtons(['#export', '#collect']);
-         });
+         }, "json");
      });
 
      //导出采集到的主机信息到文件
