@@ -13,12 +13,13 @@
      //表示允许使用推送技术
      dwr.engine.setActiveReverseAjax(true);
      CollectTool.toggleAutoBind('#autoExport');
-     $('#poll').click(function() {
+     $('#collect').click(function() {
 
          var that = this;
 
          //单击执行按钮进入采集过程，这个过程中所有按钮不能操作
          CollectTool.disableButtons(['#collect', '#export']);
+        
          //将上一次采集到的主机表格清空
          var $tbody = $('table tbody');
          $tbody.empty();
@@ -93,9 +94,14 @@
 
              }
 
-             //采集完毕，恢复按钮
+             
+         }, "json").error(function(xhr,msg,e) {
+             /* Act on the event */
+             alert('网络连接失败,错误原因:'+msg);
+         }).complete(function(){
+            //采集完毕，恢复按钮
              CollectTool.enableButtons(['#export', '#collect']);
-         }, "json");
+         });
      });
 
      //导出采集到的主机信息到文件
