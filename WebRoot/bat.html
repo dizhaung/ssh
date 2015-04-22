@@ -97,32 +97,31 @@
     </div><!-- 行结束 -->
     
     <!--  遮罩层和弹出视口 -->
-	
-    <div class="modal" id="modal">
-    	<div class="modal-dialog">
-    		<div class="modal-content">
-    		<div class="modal-header">
-    			<h3 class="">命令行输入</h3>
-    		</div>
-    		<div class="modal-body">
-    		
-    		<input type="text" class="form-control" placeholder="请小心输入命令" id="finalCommandText">
-    		<div class="alert alert-danger alert-dismissable">
-    				<button class="close" data-dismiss="alert" type="button">&times;</button>
-					1：所输入的命令一定要经过手工验证脚本本身的准确和有效性.</br>
-					2：所输入的命令一定要经过手工验证不会对服务器产生破坏.
-				</div>
-    		</div>
-    		<div class="modal-footer">
-    			<button class="btn btn-default" data-dismiss="modal" type="button">取消</button>
-    			<button class="btn btn-primary" data-dismiss="modal" type="button" id="finalCommandBut">确定</button> 
-			 
-    		</div>
-    	</div>
-    	</div>
-    	
+<div class="modal" id="retypeComView">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="">命令行输入</h3>
+            </div>
+            <div class="modal-body">
+                
+                <input type="text" class="form-control" placeholder="请小心输入命令" id="finalCommandText">
+                <div class="alert alert-danger alert-dismissable">
+                    <button class="close" data-dismiss="alert" type="button">&times;</button>
+                    1：所输入的命令一定要经过手工验证脚本本身的准确和有效性.</br>
+                    2：所输入的命令一定要经过手工验证不会对服务器产生破坏.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" data-dismiss="modal" type="button">取消</button>
+                <button class="btn btn-primary" data-dismiss="modal" type="button" id="finalCommandBut">确定</button>
+                
+            </div>
+        </div>
     </div>
-    <div class="modal" id="alertModal">
+    
+</div>
+    <div class="modal" id="validComPromptView">
     	<div class="modal-dialog">
     		<div class="modal-content">
   
@@ -169,7 +168,7 @@
     		
     		$('#command').click(function(){
     		
-    			$('#modal').modal({
+    			$('#validComPromptView').modal({
     				'keyboard':true
     			},'toggle');
     		});
@@ -192,7 +191,7 @@
     		
     			//检查输入命令的合法性
     			if(!CollectTool.validate(command)){
-    				$('#alertModal').modal({
+    				$('#retypeComView').modal({
         				'keyboard':true
         			},'toggle');
     				return;
