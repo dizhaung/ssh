@@ -1,10 +1,10 @@
 var PagingTool = {
 	'removePagingTags': function() {
-		$('div#paging').remove();
+		$('div#pagenation').remove();
 	},
 	'addPagingTags': function() {
 		$('div#collectresult').after([
-			'<div id="paging" class="row">',
+			'<div id="pagenation" class="row">',
 			'<nav>',
 			'<ul class ="pager">',
 			'<li class="previous"><a href ="####">上一页</a></li>',
@@ -19,15 +19,15 @@ var PagingTool = {
 		var $totalRows = $('table.sortable tbody tr');
 		var numberPerPage = 12;
 		var totalNumber = $('table.sortable tbody tr').toArray().length;
-		var pageNumber = Math.ceil(totalNumber / numberPerPage);
+		var pageNumber = Math.ceil(totalNumber / PagingTool.numberPerPage);
 		var currentPage = 1;
 
 		var showRowsToCurrentPage = function() {
 			$totalRows.hide();
 			$totalRows.each(function(index, el) {
 
-				var upRangePage = currentPage * numberPerPage
-				var lowRangePage = upRangePage - numberPerPage + 1;
+				var upRangePage = currentPage * PagingTool.numberPerPage
+				var lowRangePage = upRangePage - PagingTool.numberPerPage + 1;
 				var rowNumber = index + 1;
 				if (rowNumber >= lowRangePage && rowNumber <= upRangePage) {
 					$(this).show();
@@ -59,25 +59,25 @@ var PagingTool = {
 	},
 	'pagingWithPageNumber': function() {
 		var $totalRows = $('table.sortable tbody tr');
-		var numberPerPage = 12;
-		var totalNumber = $('table.sortable tbody tr').toArray().length;
-		var pageNumber = Math.ceil(totalNumber / numberPerPage);
-		var currentPage = 1;
+		//var PagingTool.numberPerPage = 12;
+		PagingTool.totalNumber = $totalRows.toArray().length;
+		PagingTool.pageNumber = Math.ceil(PagingTool.totalNumber / PagingTool.numberPerPage);
+		PagingTool.currentPage = 1;
 
 		var showRowsToCurrentPage = function() {
 			$totalRows.hide();
 			$totalRows.each(function(index, el) {
 
-				var upRangePage = currentPage * numberPerPage
-				var lowRangePage = upRangePage - numberPerPage + 1;
+				var upRangePage = PagingTool.currentPage * PagingTool.numberPerPage
+				var lowRangePage = upRangePage - PagingTool.numberPerPage + 1;
 				var rowNumber = index + 1;
 				if (rowNumber >= lowRangePage && rowNumber <= upRangePage) {
 					$(this).show();
 				}
 			});
 		};
-		if (pageNumber > 0) {
-			$('<div class="row">' + '<nav>' + '<ul class="pagination">'
+		if (PagingTool.pageNumber > 0) {
+			$('<div class="row" id="pagenation">' + '<nav>' + '<ul class="pagination">'
 
 					+ '</ul>' + '</nav>' + '</div>')
 				.insertAfter('div#collectresult').find('ul')
@@ -89,23 +89,23 @@ var PagingTool = {
 					$('<li><a href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a></li>').appendTo($tagsContainer)
 						.click(function(event) {
 							/* Act on the event */
-							currentPage = 1;
+							PagingTool.currentPage = 1;
 							$currentPageTag.removeClass('active');
 							$currentPageTag = $(this).next().addClass('active');
 							showRowsToCurrentPage();
 						});
-					for (var i = 1; i <= pageNumber; i++) {
+					for (var i = 1; i <= PagingTool.pageNumber; i++) {
 
 						var $pageTag = $('<li><a href="#">' + i + '</a></li>').appendTo($tagsContainer).click((function(i) {
 							return function(event) {
 								/* Act on the event */
 								$currentPageTag.removeClass('active');
 								$currentPageTag = $(this).addClass('active');
-								currentPage = i;
+								PagingTool.currentPage = i;
 								showRowsToCurrentPage();
 							}
 						})(i));
-						if (currentPage == i) {
+						if (PagingTool.currentPage == i) {
 							$currentPageTag = $pageTag;
 						}
 					}
@@ -113,7 +113,7 @@ var PagingTool = {
 					$('<li><a href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a></li>').appendTo($tagsContainer)
 						.click(function(event) {
 							/* Act on the event */
-							currentPage = pageNumber;
+							PagingTool.currentPage = PagingTool.pageNumber;
 							$currentPageTag.removeClass('active');
 							$currentPageTag = $(this).prev().addClass('active');
 							showRowsToCurrentPage();
@@ -125,3 +125,7 @@ var PagingTool = {
 	}
 
 };
+PagingTool.numberPerPage = 12;
+PagingTool.pageNumber = 0;
+PagingTool.currentPage = 0;
+PagingTool.totalNumber = 0;
