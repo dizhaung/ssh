@@ -79,7 +79,17 @@
             
             
             </div><!-- 行结束 -->
-           
+
+<!-- 由于各种潜在的原因，例如网络问题，导致采集失败时的友好提示 -->
+<div class="modal" id="errorPromptView">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="alert alert-danger"></div>
+            </div>
+        </div>
+    </div>
+</div>
             <iframe src="" style="display:none;" id="exportIframe"></iframe>
             <!-- DWR -->
             <script type="text/javascript" src="dwr/util.js"></script>

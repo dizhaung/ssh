@@ -1,6 +1,6 @@
  //实时显示采集进度
  function show(msg) {
-     
+
      msg = JSON.parse(msg);
 
      var progressBar = $("#progressBar");
@@ -19,7 +19,7 @@
 
          //单击执行按钮进入采集过程，这个过程中所有按钮不能操作
          CollectTool.disableButtons(['#collect', '#export']);
-        
+
          //将上一次采集到的主机表格清空
          var $tbody = $('table tbody');
          $tbody.empty();
@@ -94,17 +94,19 @@
 
              }
 
-             
-         }, "json").error(function(xhr,msg,e) {
+
+         }, "json").error(function(xhr, msg, e) {
              /* Act on the event */
-             alert('网络连接失败,错误原因:'+msg);
-         }).complete(function(){
-            //采集完毕，恢复按钮
+             $('#errorPromptView').modal('show').find('div.alert').text('网络连接失败,错误原因:' + msg);
+
+         }).complete(function() {
+             //采集完毕，恢复按钮
              CollectTool.enableButtons(['#export', '#collect']);
          });
      });
 
-     //导出采集到的主机信息到文件
+    
+         //导出采集到的主机信息到文件
      var exportButton = $('#export').click(function() {
          //下载文件
          CollectTool.exportFileFrom({
