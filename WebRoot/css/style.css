@@ -23,7 +23,13 @@
 	background-color:#00cd32;
 }
 
-
+.logo-link{
+	display:inline-block;
+}
+.logo-link > img {
+	width:100%;
+	height:100%;
+}
 /* 半透明的遮罩层 */
 #alphalayer {
     background: #000;
