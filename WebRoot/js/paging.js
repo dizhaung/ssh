@@ -107,6 +107,7 @@ var PagingTool = {
 						})(i));
 						if (PagingTool.currentPage == i) {
 							$currentPageTag = $pageTag;
+							$currentPageTag.addClass('active');
 						}
 					}
 					//末页,点击末页标签 最后一个数字标签被激活，其他的标签都失活
