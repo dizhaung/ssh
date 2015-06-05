@@ -19,37 +19,50 @@
 	color:#009900;
 	font-weight:bold;
 }
-.collect-result-table-head{
-	background-color:#00cd32;
-}
+.collect-result-table-head{ background-color:#00cd32; }
 
-.logo-link{
-	display:inline-block;
-}
+.logo-link{ display:inline-block;   }
 .logo-link > img {
 	width:100%;
 	height:100%;
 }
 /* 半透明的遮罩层 */
 #alphalayer {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    z-index: 1000; /* 此处的图层要大于页面 */
+
+    width: 100%;
+    height: 100%;
+    
     background: #000;
     filter: alpha(opacity=50); /* IE的透明度 */
     opacity: 0.5;  /* 透明度 */
     display: none;
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    width: 100%;
-    height: 100%;
-    z-index: 1000; /* 此处的图层要大于页面 */
-    display:none;
 }
 /* 弹出的视窗 */
 #popwin {
-    background: white;
     position: absolute;
     top: 0px;
     left: 0px;
     z-index: 1001; /* 此处的图层要大于页面 */
- 	display:none;
+
+    background: white;
+    display:none;
+}
+
+.content-justify{
+    padding-left:0;
+    padding-right: 0;
+}
+
+.pull-left-15px{
+    margin-left: -15px;
+    margin-right: auto;
+}
+
+.pull-right-15px{
+    margin-left: auto;
+    margin-right: -15px;
 }
