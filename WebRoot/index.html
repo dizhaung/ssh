@@ -23,11 +23,12 @@
             <div class="page-header page-header-fix">
                 <h1 class="page-header-title">
                 <div class="row">
-                    <div class="col-sm-2">
+                    <!-- 布局策略，比平板（768px）大的显示设备上，各列都是水平排列，手机上堆叠 -->
+                    <div class="col-xs-2 col-sm-2">
                         <a class="logo-link" href="."><img src="image/logo.gif" alt="山西移动"/></a>
                     </div>
-                    <div class="col-sm-1"></div>
-                    <div class="col-sm-9">
+                    <div class="hidden-xs col-sm-1"></div>
+                    <div class="col-xs-10 col-sm-9">
                         轻量化的业务系统运行环境信息采集和处理工具
                     </div>
                     
@@ -36,13 +37,13 @@
             </div>
             
             <div class="row">
-                <div class="col-sm-1"><button id="collect" class="btn  btn-default btn-block" type="button">执&nbsp;&nbsp;行</button></div>
-                <div class="col-sm-8"></div>
-                <div class="col-sm-2">
+                <div class="col-sm-2 col-md-2 col-lg-1"><button id="collect" class="btn  btn-default btn-block pull-left-15px" type="button">执&nbsp;&nbsp;行</button></div>
+                <div class="col-sm-6 col-md-6 col-lg-8"></div>
+                <div class="col-sm-2 col-md-2 col-lg-2">
                     <input type="checkbox" checked id="autoExport" />是否自动导出
                 </div>
-                <div class="col-sm-1">
-                    <button id="export" class="btn  btn-default  btn-block" type="button">导&nbsp;&nbsp;出</button>
+                <div class="col-sm-2 col-md-2 col-lg-1">
+                    <button id="export" class="btn  btn-default  btn-block pull-right-15px" type="button">导&nbsp;&nbsp;出</button>
                 </div>
                 
                 
@@ -81,16 +82,16 @@
             
             </div><!-- 行结束 -->
 
-<!-- 由于各种潜在的原因，例如网络问题，导致采集失败时的友好提示 -->
-<div class="modal" id="errorPromptView">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-body">
-                <div class="alert alert-danger"></div>
+            <!-- 由于各种潜在的原因，例如网络问题，导致采集失败时的友好提示 -->
+            <div class="modal" id="errorPromptView">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-body">
+                            <div class="alert alert-danger"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-</div>
             <iframe src="" style="display:none;" id="exportIframe"></iframe>
             <!-- DWR -->
             <script type="text/javascript" src="dwr/util.js"></script>
