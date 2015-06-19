@@ -17,7 +17,15 @@ import constants.regex.Regex;
  */
 public class Host extends HostBase{
 	
-
+	
+	public Host() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	public Host(String ip) {
+		super(ip);
+		// TODO Auto-generated constructor stub
+	}
 	@Override
 	public String getHostType() {
 		// TODO Auto-generated method stub

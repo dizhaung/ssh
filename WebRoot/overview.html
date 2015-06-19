@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    
+    <link href="jqmobile/jquery.mobile-1.4.5.css" rel="stylesheet">
+    <script src="jquery/jquery-1.11.1.js"></script>
+    <script src="jqmobile/jquery.mobile-1.4.5.js"></script>
+  </head>
+  <body>
+    <div data-role="page" data-control-title="Home" id="page1">
+      <div data-theme="a" data-role="header">
+        <div style=" text-align:center" data-controltype="image">
+          <img style="width: %; height: 100%" src="image/logo.gif">
+        </div>
+        <h2 class="ui-title">
+        轻量化服务器采集工具
+        </h2>
+        
+      </div>
+      <div role="main" class="ui-content">
+        <h2>OA公文系统</h2>
+        <ul data-role="listview">
+          <li data-role="list-divider">主机名</li>
+          <li>tams</li>
+         
+          <li data-role="list-divider">服务器类型</li>
+          <li>IBM</li>
+          
+          <li data-role="list-divider">是否负载均衡</li>
+          <li>是</li>
+          <li data-role="list-divider">是否双机</li>
+          <li>是</li>
+          <li data-role="list-divider">应用系统个数</li>
+          <li>5</li>
+          <li data-role="list-divider">数据库个数</li>
+          <li>4</li>
+        </ul>
+      </div>
+    
+    <div data-theme="a" data-role="footer" data-position="fixed">
+        <div data-role="navbar" data-iconpos="top">
+            <ul>
+                <li>
+                    <a href="javascript:window.history.back();" data-transition="fade" data-theme="" data-icon="back">
+                        返回
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+  </body>
+</html>

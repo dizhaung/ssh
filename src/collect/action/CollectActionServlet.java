@@ -63,7 +63,6 @@ public class CollectActionServlet extends HttpServlet {
 		JSONArray o = JSONArray.fromObject(list);
 		out.print(o);
 		out.flush();
-		
 	}
 
 	/**

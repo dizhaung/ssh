@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    
+    <link href="jqmobile/jquery.mobile-1.4.5.css" rel="stylesheet">
+    <script src="jquery/jquery-1.11.1.js"></script>
+    <script src="jqmobile/jquery.mobile-1.4.5.js"></script>
+  </head>
+  <body>
+    <div data-role="page" data-control-title="Home" id="page1">
+      <div data-theme="a" data-role="header">
+        <div style=" text-align:center" data-controltype="image">
+          <img  src="image\logo.gif">
+        </div>
+        <h2 class="ui-title">
+        轻量化服务器采集工具
+        </h2>
+        <div data-role="navbar" data-iconpos="top">
+          <ul>
+            <li id="collect">
+              <a href="#page1" data-transition="fade" data-theme="" data-icon="gear">
+                执行
+              </a>
+            </li>
+            <li id="export">
+              <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-d">
+                导出
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div role="main" class="ui-content">
+        <ul id="dataContainer" data-role="listview" data-divider-theme="a" data-inset="true">
+          
+        </ul>
+      </div>
+      <div data-theme="a" data-role="footer" data-position="fixed">
+        <h5>
+        1/9
+        </h5>
+        <div data-role="navbar" data-iconpos="top">
+          <ul>
+            <li id="previous">
+              <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-l">
+                上一页
+              </a>
+            </li>
+            <li id="next">
+              <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-r">
+                下一页
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/collecttool.js"></script>
+    <script type="text/javascript" src="mobile_js/paging.js"></script>
+    <script type="text/javascript" src="mobile_js/collect.js"></script>
+   
+  </body>
+</html>
