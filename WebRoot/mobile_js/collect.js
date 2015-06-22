@@ -1,19 +1,20 @@
  $(document).ready(function() {
 
- 
+    
      $('#collect').click(function() {
 
          var that = this;
 
          //单击执行按钮进入采集过程，这个过程中所有按钮不能操作
          CollectTool.disableButtons(['#collect', '#export']);
-
+         $(that).button('disable');
          //将上一次采集到的主机表格清空
          var $dataContainer = $('#dataContainer');
          $dataContainer.empty();
-        
+          $.mobile.loading('show');   
          $.post('/ssh/collect', function(data, textStatus) {
-
+              $.mobile.loading('hide');  
+            console.log('data='+data+"\ntextStatus="+textStatus); 
              /**
              * 主机无法采集的情况下，detail为null
              各要显示的主机详情项单元格显示"未知"
@@ -60,23 +61,7 @@
                     '<a href="./overview.html">Some Text</a>',
                     '</li>'].join(''));
                    $dataContainer.append($hostItem);
-                    /*$('<td></td>').text(index + 1).appendTo($tr); //序号
-
-                     $('<td></td>').text(el.buss).appendTo($tr); //业务名称
-                     $('<td></td>').text(detailDot("hostName", el.detail)).appendTo($tr); //主机名
-                     $('<td></td>').text((el.dList.length > 0 ? '数据库服务器' : '') + ' ' + (el.mList.length > 0 ? '应用服务器' : '')).appendTo($tr); //类型（数据库服务器or应用服务器）
-
-                     $('<td></td>').text(el.ip).appendTo($tr); //IP
-                     $('<td></td>').text(el.os ? el.os : "未知").appendTo($tr); //操作系统
-
-                     $('<td></td>').text(detailDot("isLoadBalanced", el.detail)).appendTo($tr); //是否负载均衡
-                     $('<td></td>').text(detailDot("isCluster", el.detail)).appendTo($tr); //是否双机
-                     $('<td></td>').text(appCountOf(el.mList)).appendTo($tr); //应用系统个数
-                     $('<td></td>').text(allDbTypeAndVersionOf(el.dList)).appendTo($tr); //各个数据库名称及版本
-
-
-                     $('<td></td>').html('<a target="_blank" href="hostdetail?ip=' + el.ip + '">详细信息</a>').appendTo($tr); //详细信息
-*/
+                    
                  });
                  $dataContainer.listview('refresh');
                  PagingTool.paging();
@@ -91,6 +76,7 @@
 
          }).complete(function() {
              //采集完毕，恢复按钮
+             $(that).button('enable');
              CollectTool.enableButtons(['#export', '#collect']);
          });
      });
@@ -105,4 +91,7 @@
          });
      });
 
+    $(document).on("pageload", function(event, data) {
+        alert("触发 pageload 事件！\nURL: " + data.url);
+    });
  });
