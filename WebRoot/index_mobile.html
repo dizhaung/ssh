@@ -20,50 +20,45 @@
         <h2 class="ui-title">
         轻量化服务器采集工具
         </h2>
-        <div data-role="navbar" data-iconpos="top">
-          <ul>
-            <li id="collect">
-              <a href="#page1" data-transition="fade" data-theme="" data-icon="gear">
-                执行
-              </a>
-            </li>
-            <li id="export">
-              <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-d">
-                导出
-              </a>
-            </li>
-          </ul>
-        </div>
+        
       </div>
       <div role="main" class="ui-content">
-        <ul id="dataContainer" data-role="listview" data-divider-theme="a" data-inset="true">
+        <div class="ui-grid-a">
+          <div class="ui-block-a"><a id="collect" href="#" data-role="button" data-icon="gear" data-theme="c">执行</a></div>
+          <div class="ui-block-b"> <a id="export" href="#" data-role="button" data-icon="arrow-d" data-theme="c">导出</a></div>
+         
+          </div><!-- /grid-a -->
           
-        </ul>
-      </div>
-      <div data-theme="a" data-role="footer" data-position="fixed">
-        <h5>
-        1/9
-        </h5>
-        <div data-role="navbar" data-iconpos="top">
-          <ul>
-            <li id="previous">
-              <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-l">
-                上一页
-              </a>
-            </li>
-            <li id="next">
-              <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-r">
-                下一页
-              </a>
-            </li>
+
+         
+          
+          <ul id="dataContainer" data-role="listview" data-divider-theme="a" data-inset="true">
+            
           </ul>
         </div>
+        <div data-theme="a" data-role="footer" data-position="fixed">
+          <h5>
+          1/9
+          </h5>
+          <div data-role="navbar" data-iconpos="top">
+            <ul>
+              <li id="previous">
+                <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-l">
+                  上一页
+                </a>
+              </li>
+              <li id="next">
+                <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-r">
+                  下一页
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
       </div>
-    </div>
-
-    <script src="js/collecttool.js"></script>
-    <script type="text/javascript" src="mobile_js/paging.js"></script>
-    <script type="text/javascript" src="mobile_js/collect.js"></script>
-   
-  </body>
-</html>
+      <script src="js/collecttool.js"></script>
+      <script type="text/javascript" src="mobile_js/paging.js"></script>
+      <script type="text/javascript" src="mobile_js/collect.js"></script>
+      
+    </body>
+  </html>
