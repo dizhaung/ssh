@@ -1,15 +1,26 @@
+ //实时显示采集进度
+ function show(msg) {
+
+     msg = JSON.parse(msg);
+
+     var progressBar = $("#progressBar");
+     var progressBarLabel = progressBar;
+     progressBarLabel.text(msg.msg + msg.nowNum + "/" + msg.maxNum + "       " + msg.ip);
+     msg.maxNum == 0 ? progressBar.css('width', '100%') : progressBar.css('width', msg.nowNum / msg.maxNum * 100 + '%')
+ }
  $(document).ready(function() {
 
-
+    //表示允许使用推送技术
+     dwr.engine.setActiveReverseAjax(true);
+     
      $('#collect').click(function() {
 
          var that = this;
          //将上一次采集到的主机表格清空
          var $dataContainer = $('#dataContainer');
          $dataContainer.empty();
-         console.log($(that));
 
-         $(that).addClass('ui-state-disabled');
+         $(that).addClass('ui-state-disabled');//采集过程中不可重复点击
          $.mobile.loading('show');
          $.ajax({
              url: '/ssh/collect',

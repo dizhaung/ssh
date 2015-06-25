@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    
+    <link rel="stylesheet" type="text/css" href="bootstrap/components/css/bootstrap-progressBar.min.css">
     <link href="jqmobile/jquery.mobile-1.4.5.css" rel="stylesheet">
     <script src="jquery/jquery-1.11.1.js"></script>
     <script src="jqmobile/jquery.mobile-1.4.5.js"></script>
@@ -26,11 +26,14 @@
         <div class="ui-grid-a">
           <div class="ui-block-a"><a id="collect" href="#" data-role="button" data-icon="gear" data-theme="c">执行</a></div>
           <div class="ui-block-b"> <a id="export" href="#" data-role="button" data-icon="arrow-d" data-theme="c">导出</a></div>
-         
+          
           </div><!-- /grid-a -->
           
-
-         
+          <div class="progress">
+            <div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;">采集进度</div>
+          </div>
+          
+          
           
           <ul id="dataContainer" data-role="listview" data-divider-theme="a" data-inset="true">
             
@@ -56,6 +59,12 @@
           </div>
         </div>
       </div>
+      <!-- DWR -->
+      <script type="text/javascript" src="dwr/util.js"></script>
+      <script type="text/javascript" src="dwr/engine.js"></script>
+      <!-- 页面推环境初始化 -->
+      <script type="text/javascript" src="dwr/interface/DWRContexInitor.js"></script>
+      <script src="js/json/json_parse.js"></script>
       <script src="js/collecttool.js"></script>
       <script type="text/javascript" src="mobile_js/paging.js"></script>
       <script type="text/javascript" src="mobile_js/collect.js"></script>
