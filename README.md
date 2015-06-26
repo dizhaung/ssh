@@ -5,7 +5,7 @@ Involving Tech:
 Back:
 Java,Json,Jsch,Expect4j
 
-Front:JQ,Json,Ajax,Bootstrap
+Front:JQ,Json,Ajax,Bootstrap,JQM
 
 
 
