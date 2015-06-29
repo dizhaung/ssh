@@ -8,12 +8,13 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="stylesheet" type="text/css" href="bootstrap/components/css/bootstrap-progressBar.min.css">
     <link href="jqmobile/jquery.mobile-1.4.5.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="css/jqm-ui-theme.css">
     <script src="jquery/jquery-1.11.1.js"></script>
     <script src="jqmobile/jquery.mobile-1.4.5.js"></script>
   </head>
   <body>
-    <div data-role="page" data-control-title="Home" id="page1">
-      <div data-theme="a" data-role="header">
+    <div data-role="page" class="ui-page-theme-b" data-control-title="Home" id="page1">
+      <div data-role="header">
         <div style=" text-align:center" data-controltype="image">
           <img  src="image\logo.gif">
         </div>
@@ -39,19 +40,19 @@
             
           </ul>
         </div>
-        <div data-theme="a" data-role="footer" data-position="fixed">
+        <div  data-role="footer" data-position="fixed">
           <h5>
           1/9
           </h5>
           <div data-role="navbar" data-iconpos="top">
             <ul>
               <li id="previous">
-                <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-l">
+                <a href="#page1" data-transition="fade"  data-icon="arrow-l">
                   上一页
                 </a>
               </li>
               <li id="next">
-                <a href="#page1" data-transition="fade" data-theme="" data-icon="arrow-r">
+                <a href="#page1" data-transition="fade"  data-icon="arrow-r">
                   下一页
                 </a>
               </li>
