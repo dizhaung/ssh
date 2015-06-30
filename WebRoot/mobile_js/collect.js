@@ -57,7 +57,7 @@
                  if (data.length > 0) { //采集之后并且有服务器被采集
                      //显示采集到的服务器列表
                      $(data).each(function(index, host) {
-                         var $hostItem = $(['<li data-theme="a">',
+                         var $hostItem = $(['<li>',
                              '<a href="overview.html" data-transition="slide"><img src="image/chrome.png" >',
                              '<h2>',
                              host.buss,

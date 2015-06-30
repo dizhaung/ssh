@@ -1,3 +1,8 @@
+/**
+ * 分页工具
+ * 时间:2015-06-29
+ */
+
 var PagingTool = {
 	'removePagingTags': function() {
 		$('div#pagenation').remove();

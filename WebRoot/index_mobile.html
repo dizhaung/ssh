@@ -8,12 +8,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <link rel="stylesheet" type="text/css" href="bootstrap/components/css/bootstrap-progressBar.min.css">
     <link href="jqmobile/jquery.mobile-1.4.5.css" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="css/jqm-ui-theme.css">
+    <link rel="stylesheet" type="text/css" href="css/jqm-themes/b/jqm-ui-theme-b.css">
     <script src="jquery/jquery-1.11.1.js"></script>
     <script src="jqmobile/jquery.mobile-1.4.5.js"></script>
   </head>
   <body>
-    <div data-role="page" class="ui-page-theme-b" data-control-title="Home" id="page1">
+    <div data-role="page"  data-control-title="Home" id="page1">
       <div data-role="header">
         <div style=" text-align:center" data-controltype="image">
           <img  src="image\logo.gif">
@@ -25,8 +25,8 @@
       </div>
       <div role="main" class="ui-content">
         <div class="ui-grid-a">
-          <div class="ui-block-a"><a id="collect" href="#" data-role="button" data-icon="gear" data-theme="c">执行</a></div>
-          <div class="ui-block-b"> <a id="export" href="#" data-role="button" data-icon="arrow-d" data-theme="c">导出</a></div>
+          <div class="ui-block-a"><a id="collect" href="#" data-role="button" data-icon="gear" data-theme="b">执行</a></div>
+          <div class="ui-block-b"> <a id="export" href="#" data-role="button" data-icon="arrow-d" data-theme="b">导出</a></div>
           
           </div><!-- /grid-a -->
           
@@ -36,23 +36,23 @@
           
           
           
-          <ul id="dataContainer" data-role="listview" data-divider-theme="a" data-inset="true">
+          <ul id="dataContainer" data-role="listview" data-theme="a" data-inset="true">
             
           </ul>
         </div>
-        <div  data-role="footer" data-position="fixed">
+        <div  data-role="footer" data-position="fixed" >
           <h5 id="pageSign">
           0/0
           </h5>
           <div data-role="navbar" data-iconpos="top">
             <ul>
               <li id="previous">
-                <a href="#page1" data-transition="fade"  data-icon="arrow-l">
+                <a href="#page1" data-transition="fade"  data-icon="arrow-l" data-theme="b">
                   上一页
                 </a>
               </li>
               <li id="next">
-                <a href="#page1" data-transition="fade"  data-icon="arrow-r">
+                <a href="#page1" data-transition="fade"  data-icon="arrow-r" data-theme="b">
                   下一页
                 </a>
               </li>
