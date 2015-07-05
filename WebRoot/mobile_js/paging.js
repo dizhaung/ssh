@@ -1,3 +1,8 @@
+/**
+ * 分页工具
+ * 时间:2015-06-29
+ */
+
 var PagingTool = {
 	'removePagingTags': function() {
 		$('div#pagenation').remove();
@@ -7,46 +12,52 @@ var PagingTool = {
 
 		var $totalRows = $('#dataContainer > li');
 		var that = this;
-		that.totalNumber = $totalRows.toArray().length;
-		that.pageNumber = Math.ceil(that.totalNumber / that.numberPerPage);
-		that.currentPage = 1;
+		that.totalRowsCount = $totalRows.toArray().length;
+		that.pageCount = Math.ceil(that.totalRowsCount / that.countPerPage);
+		that.currentPageNumber = 1;
 
 		var showRowsToCurrentPage = function() {
 			$totalRows.hide();
 			$totalRows.each(function(index, el) {
 
-				var upRangePage = that.currentPage * that.numberPerPage
-				var lowRangePage = upRangePage - that.numberPerPage + 1;
+				var upRangePage = that.currentPageNumber * that.countPerPage;
+				var lowRangePage = upRangePage - that.countPerPage + 1;
 				var rowNumber = index + 1;
 				if (rowNumber >= lowRangePage && rowNumber <= upRangePage) {
 					$(this).show();
 				}
 			});
 		};
+		var showCurrentAndTotalPageNumber = function(){
+			var $pageSign = $('#pageSign');
+			$pageSign.html(that.currentPageNumber+'/'+that.pageCount);
+		};
 		showRowsToCurrentPage();
-		
+		showCurrentAndTotalPageNumber();
 		//分页功能中的上一页操作
 		$('li#previous').bind('click', function(event) {
-			if (that.currentPage == 1) {
+			if (that.currentPageNumber == 1) {
 				return;
 			}
-			that.currentPage--;
+			that.currentPageNumber--;
 			showRowsToCurrentPage();
+			showCurrentAndTotalPageNumber();
 		});
 		//分页功能中的下一页操作
 		$('li#next').bind('click', function(event) {
-			if (that.currentPage == that.pageNumber) {
+			if (that.currentPageNumber == that.pageCount) {
 				return;
 			}
-			that.currentPage++;
+			that.currentPageNumber++;
 			showRowsToCurrentPage();
+			showCurrentAndTotalPageNumber();
 		});
 
 	},
 
 };
-PagingTool.numberPerPage = 6;
-PagingTool.pageNumber = 0;
-PagingTool.currentPage = 0;
-PagingTool.totalNumber = 0;
+PagingTool.countPerPage = 6;
+PagingTool.pageCount = 0;
+PagingTool.currentPageNumber = 0;
+PagingTool.totalRowsCount = 0;
 PagingTool.hostDataArray = []; 

@@ -5,6 +5,8 @@
     %> 
 <%
   	//DwrPageContext.run();
-	
+	String callback = request.getParameter("callback");
+	String cb= request.getParameter("cb");
+	System.out.println(callback+"   "+cb);
 	%>
 	<%="request"+count++ %> 
