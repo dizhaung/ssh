@@ -38,13 +38,11 @@
                 
                 
              
-                    <div>
+                    
                         <label class="control-label"  for="command">请在下框输入要批量执行的命令</label>
                         
                         <input data-theme="b" type="text" class="form-control" placeholder="请输入要执行的命令" id="command">
-                      
-                        
-                    </div>
+                   
                  
                 <div class="ui-grid-a">
                     <div class="ui-block-a" > <button id="collect" type="button" data-theme="b" data-icon="gear">执行
@@ -59,11 +57,11 @@
                         <div id="progressBar" class="progress-bar" style="color:black;white-space:nowrap;width:0%;">命令执行进度</div>
                     </div>
 
-                <table data-role="table" data-mode="comlumntoggle" id="batResultTable" class="table-stroke">
+                <table data-role="table" id="batResultTable" data-mode="columntoggle" data-column-btn-text="选择列..." class="ui-responsive table-stroke">
                         <thead>
                             <tr class="table-head">
-                                <th data-priority="1">序&nbsp;号</th>
-                                <th data-priority="2">业务系统</th>
+                                <th>序&nbsp;号</th>
+                                <th>业务系统</th>
                                 <th data-priority="3">主机名</th>
                                 <th data-priority="4">服务器类型</th>
                                 <th data-priority="5">IP地址</th>
@@ -83,7 +81,11 @@
                 </div><!-- 内容区 结束 -->
                 <div data-role="footer"></div>
             </div>
-                
+<div data-role="page" data-dialog="true" data-defaults="true" id="retypeCommandDialog">
+    <div data-role="content">
+        <a href="#pagetwo" data-rel="dialog">转到页面二</a>
+    </div>
+</div>
                 
                 <iframe src="" style="display:none;" id="exportIframe"></iframe>
                 <!-- DWR -->
@@ -98,86 +100,84 @@
                     
                 //实时显示采集进度
                 function show(msg) {
-                console.log(msg);
-                msg = JSON.parse(msg);
-                var progressBar = $("#progressBar");
-                var progressBarLabel = progressBar;
-                progressBarLabel.text(msg.msg + msg.nowNum + "/" + msg.maxNum + "       " + msg.ip);
-                msg.maxNum == 0 ? progressBar.css('width', '100%') : progressBar.css('width', msg.nowNum / msg.maxNum * 100 + '%')
+                    console.log(msg);
+                    msg = JSON.parse(msg);
+                    var progressBar = $("#progressBar");
+                    var progressBarLabel = progressBar;
+                    progressBarLabel.text(msg.msg + msg.nowNum + "/" + msg.maxNum + "       " + msg.ip);
+                    msg.maxNum == 0 ? progressBar.css('width', '100%') : progressBar.css('width', msg.nowNum / msg.maxNum * 100 + '%')
                 }
                 $(document).ready(function() {
-                $('#command').click(function() {
-                $('#retypeComView').modal({
-                'keyboard': true
-                }, 'toggle');
+                    $('#command').click(function() {
+                       $( ":mobile-pagecontainer" ).pagecontainer( "change", "#retypeCommandDialog", { role: "dialog" } );
+                    });
+                    $('#finalCommandBut').click(function() {
+                        $('#command').val($('#finalCommandText').val());
+                    });
+                    //表示允许使用推送技术
+                    dwr.engine.setActiveReverseAjax(true);
+                    CollectTool.toggleAutoBind('#autoChkbox')
+                    $('#collect').click(function() {
+                        var that = this;
+                        //将上一次采集到的主机表格清空
+                        var tBody = $('table tbody');
+                        tBody.html('');
+                        var command = $('#command').val();
+                        //检查输入命令的合法性
+                        if (!CollectTool.validate(command)) {
+                            $('#validComPromptView').modal({
+                                'keyboard': true
+                            }, 'toggle');
+                            return;
+                        }
+                        //单击执行按钮进入采集过程，这个过程中所有按钮不能操作
+                        CollectTool.disableButtons(['#collect', '#export']);
+                        var url = '/ssh/collect/bat?command=' + command;
+                        $.post(url, function(data) {
+                            data = JSON.parse(data);
+                            if (data.length > 0) { //采集之后并且有服务器被采集
+                                /**
+                                * 主机无法采集的情况下，detail为null
+                                各要显示的主机详情项单元格显示"未知"
+                                */
+                                function hostDot(pName, host) {
+                                    return host[pName] ? host[pName] : "未知";
+                                }
+                                //显示采集到的服务器列表
+                                for (var i = 0; i < data.length; i++) {
+                                    var tr = $('<tr></tr>');
+                                    var host = data[i];
+                                    tr.appendTo(tBody);
+                                    $('<td></td>').text(i + 1).appendTo(tr); //序号
+                                    $('<td></td>').text(hostDot('buss', host)).appendTo(tr); //业务名称
+                                    $('<td></td>').text(hostDot('hostName', host)).appendTo(tr); //主机名
+                                    $('<td></td>').text(hostDot('hostType', host)).appendTo(tr); //类型（数据库服务器or应用服务器）
+                                    $('<td></td>').text(hostDot('ip', host)).appendTo(tr); //IP
+                                    $('<td></td>').text(hostDot('os', host)).appendTo(tr); //操作系统
+                                    $('<td style="white-space:pre;"></td>').text(data[i].commandResult).appendTo(tr); //命令执行的返回结果
+                                }
+                                if (CollectTool.isAutoExport()) {
+                                    //下载文件
+                                    CollectTool.exportFileFrom({
+                                        url: '/ssh/batexport',
+                                        buttonIds: ['#collect', '#export']
+                                    });
+                                }
+                            } else { //没有服务器被采集  不导出文件  后续可添加提示或其他操作
+                            }
+                            //采集完毕，恢复按钮
+                            CollectTool.enableButtons(['#export', '#collect']);
+                        });
+                    });
+                    //导出采集到的主机信息到文件
+                    var exportButton = $('#export').click(function() {
+                        //下载文件
+                        CollectTool.exportFileFrom({
+                            url: '/ssh/batexport',
+                            buttonIds: ['#collect', '#export']
+                        });
+                    });
                 });
-                $('#finalCommandBut').click(function() {
-                $('#command').val($('#finalCommandText').val());
-                });
-                //表示允许使用推送技术
-                dwr.engine.setActiveReverseAjax(true);
-                CollectTool.toggleAutoBind('#autoChkbox')
-                $('#collect').click(function() {
-                var that = this;
-                //将上一次采集到的主机表格清空
-                var tBody = $('table tbody');
-                tBody.html('');
-                var command = $('#command').val();
-                //检查输入命令的合法性
-                if (!CollectTool.validate(command)) {
-                $('#validComPromptView').modal({
-                'keyboard': true
-                }, 'toggle');
-                return;
-                }
-                //单击执行按钮进入采集过程，这个过程中所有按钮不能操作
-                CollectTool.disableButtons(['#collect', '#export']);
-                var url = '/ssh/collect/bat?command=' + command;
-                $.post(url, function(data) {
-                data = JSON.parse(data);
-                if (data.length > 0) { //采集之后并且有服务器被采集
-                /**
-                * 主机无法采集的情况下，detail为null
-                各要显示的主机详情项单元格显示"未知"
-                */
-                function hostDot(pName, host) {
-                return host[pName] ? host[pName] : "未知";
-                }
-                //显示采集到的服务器列表
-                for (var i = 0; i < data.length; i++) {
-            var tr = $('<tr></tr>');
-            var host = data[i];
-            tr.appendTo(tBody);
-            $('<td></td>').text(i + 1).appendTo(tr); //序号
-            $('<td></td>').text(hostDot('buss', host)).appendTo(tr); //业务名称
-            $('<td></td>').text(hostDot('hostName', host)).appendTo(tr); //主机名
-            $('<td></td>').text(hostDot('hostType', host)).appendTo(tr); //类型（数据库服务器or应用服务器）
-            $('<td></td>').text(hostDot('ip', host)).appendTo(tr); //IP
-            $('<td></td>').text(hostDot('os', host)).appendTo(tr); //操作系统
-            $('<td style="white-space:pre;"></td>').text(data[i].commandResult).appendTo(tr); //命令执行的返回结果
-            }
-            if (CollectTool.isAutoExport()) {
-            //下载文件
-            CollectTool.exportFileFrom({
-            url: '/ssh/batexport',
-            buttonIds: ['#collect', '#export']
-            });
-            }
-            } else { //没有服务器被采集  不导出文件  后续可添加提示或其他操作
-            }
-            //采集完毕，恢复按钮
-            CollectTool.enableButtons(['#export', '#collect']);
-            });
-            });
-            //导出采集到的主机信息到文件
-            var exportButton = $('#export').click(function() {
-            //下载文件
-            CollectTool.exportFileFrom({
-            url: '/ssh/batexport',
-            buttonIds: ['#collect', '#export']
-            });
-            });
-            });
             </script>
         </body>
     </html>
