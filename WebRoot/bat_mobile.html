@@ -11,6 +11,7 @@
         <link href="css/style.css"   rel="stylesheet"/>
         <link rel="stylesheet" type="text/css" href="jqmobile/jquery.mobile-1.4.5.css">
         <link rel="stylesheet" type="text/css" href="css/jqm-themes/b/jqm-ui-theme.css">
+        <link rel="stylesheet" type="text/css" href="css/jqm-themes/d/jqm-ui-theme-d-alert.css">
         <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
         <script src="jquery/jquery-1.11.1.js"></script>
         <script type="text/javascript" src="jqmobile/jquery.mobile-1.4.5.js"></script>
@@ -22,7 +23,7 @@
         <![endif]-->
     </head>
     <body>
-        <div data-role="page" id="index">
+        <div data-role="page"  id="home">
             
             <div data-role="header">
                 <img style="display:block;margin:0 auto;" src="image\logo.gif">
@@ -45,8 +46,15 @@
                    
                  
                 <div class="ui-grid-a">
-                    <div class="ui-block-a" > <button id="collect" type="button" data-theme="b" data-icon="gear">执行
-                     </button>
+                    <div class="ui-block-a" > 
+                        <a  data-role="button" id="collect" href="" data-theme="b" data-icon="gear">执行
+                          </a>
+                          <div data-role="popup" id="invalidCommandAlert" data-overlay-theme="b" style="max-width:400px;">
+                            <div data-role="header" data-theme="d"><h1>警告</h1></div>
+                            <div data-role="content" data-theme="d"><p>输入的命令不合法，请重新输入</p></div>
+                            
+
+                          </div>
                     </div>
                     <div class="ui-block-b">
                         <button id="export" data-theme="b" type="button"  data-icon="arrow-d">导出</button>
@@ -81,9 +89,18 @@
                 </div><!-- 内容区 结束 -->
                 <div data-role="footer"></div>
             </div>
-<div data-role="page" data-dialog="true" data-defaults="true" id="retypeCommandDialog">
+<div data-role="page" id="retypeCommandDialog" data-dialog="true">
+    <div data-role="header"   data-theme="b"><h1>命令输入行</h1></div>
     <div data-role="content">
-        <a href="#pagetwo" data-rel="dialog">转到页面二</a>
+        <input type="text" id="finalCommandText" placeholder="请小心输入命令"/>
+    </div>
+    <div data-role="footer"   data-theme="b">
+        <div data-role="navbar">
+            <ul>
+                <li><a href="#home">取消</a></li>
+                <li id="finalCommandBut"><a href="">确定</a></li>
+            </ul>
+        </div>
     </div>
 </div>
                 
@@ -109,25 +126,24 @@
                 }
                 $(document).ready(function() {
                     $('#command').click(function() {
-                       $( ":mobile-pagecontainer" ).pagecontainer( "change", "#retypeCommandDialog", { role: "dialog" } );
+                       $( ":mobile-pagecontainer" ).pagecontainer( "change", "#retypeCommandDialog");
                     });
                     $('#finalCommandBut').click(function() {
                         $('#command').val($('#finalCommandText').val());
+                        $( ":mobile-pagecontainer" ).pagecontainer( "change", "#home");
                     });
                     //表示允许使用推送技术
                     dwr.engine.setActiveReverseAjax(true);
-                    CollectTool.toggleAutoBind('#autoChkbox')
+                    
                     $('#collect').click(function() {
                         var that = this;
                         //将上一次采集到的主机表格清空
-                        var tBody = $('table tbody');
-                        tBody.html('');
+                        var $tBody = $('table tbody');
+                        $tBody.html('');
                         var command = $('#command').val();
                         //检查输入命令的合法性
                         if (!CollectTool.validate(command)) {
-                            $('#validComPromptView').modal({
-                                'keyboard': true
-                            }, 'toggle');
+                            $('#invalidCommandAlert').popup('open');
                             return;
                         }
                         //单击执行按钮进入采集过程，这个过程中所有按钮不能操作
@@ -147,7 +163,7 @@
                                 for (var i = 0; i < data.length; i++) {
                                     var tr = $('<tr></tr>');
                                     var host = data[i];
-                                    tr.appendTo(tBody);
+                                    tr.appendTo($tBody);
                                     $('<td></td>').text(i + 1).appendTo(tr); //序号
                                     $('<td></td>').text(hostDot('buss', host)).appendTo(tr); //业务名称
                                     $('<td></td>').text(hostDot('hostName', host)).appendTo(tr); //主机名
@@ -156,27 +172,15 @@
                                     $('<td></td>').text(hostDot('os', host)).appendTo(tr); //操作系统
                                     $('<td style="white-space:pre;"></td>').text(data[i].commandResult).appendTo(tr); //命令执行的返回结果
                                 }
-                                if (CollectTool.isAutoExport()) {
-                                    //下载文件
-                                    CollectTool.exportFileFrom({
-                                        url: '/ssh/batexport',
-                                        buttonIds: ['#collect', '#export']
-                                    });
-                                }
+                                $tBody.parent().table('rebuild');
+                               
                             } else { //没有服务器被采集  不导出文件  后续可添加提示或其他操作
                             }
                             //采集完毕，恢复按钮
                             CollectTool.enableButtons(['#export', '#collect']);
                         });
                     });
-                    //导出采集到的主机信息到文件
-                    var exportButton = $('#export').click(function() {
-                        //下载文件
-                        CollectTool.exportFileFrom({
-                            url: '/ssh/batexport',
-                            buttonIds: ['#collect', '#export']
-                        });
-                    });
+                   
                 });
             </script>
         </body>
