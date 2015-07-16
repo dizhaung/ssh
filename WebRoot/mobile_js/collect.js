@@ -12,7 +12,6 @@
 
     //表示允许使用推送技术
      dwr.engine.setActiveReverseAjax(true);
-     
      $('#collect').click(function() {
 
          var that = this;
@@ -73,23 +72,7 @@
                              '</li>'
                          ].join(''));
                          $dataContainer.append($hostItem);
-                         /*$('<td></td>').text(index + 1).appendTo($tr); //序号
-
-                     $('<td></td>').text(el.buss).appendTo($tr); //业务名称
-                     $('<td></td>').text(detailDot("hostName", el.detail)).appendTo($tr); //主机名
-                     $('<td></td>').text((el.dList.length > 0 ? '数据库服务器' : '') + ' ' + (el.mList.length > 0 ? '应用服务器' : '')).appendTo($tr); //类型（数据库服务器or应用服务器）
-
-                     $('<td></td>').text(el.ip).appendTo($tr); //IP
-                     $('<td></td>').text(el.os ? el.os : "未知").appendTo($tr); //操作系统
-
-                     $('<td></td>').text(detailDot("isLoadBalanced", el.detail)).appendTo($tr); //是否负载均衡
-                     $('<td></td>').text(detailDot("isCluster", el.detail)).appendTo($tr); //是否双机
-                     $('<td></td>').text(appCountOf(el.mList)).appendTo($tr); //应用系统个数
-                     $('<td></td>').text(allDbTypeAndVersionOf(el.dList)).appendTo($tr); //各个数据库名称及版本
-
-
-                     $('<td></td>').html('<a target="_blank" href="hostdetail?ip=' + el.ip + '">详细信息</a>').appendTo($tr); //详细信息
-*/
+                        
                      });
                      $dataContainer.listview('refresh');
                      PagingTool.paging();
