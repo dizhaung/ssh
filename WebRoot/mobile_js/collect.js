@@ -18,9 +18,15 @@
          //将上一次采集到的主机表格清空
          var $dataContainer = $('#dataContainer');
          $dataContainer.empty();
-
-         $(that).addClass('ui-state-disabled');//采集过程中不可重复点击
-         $.mobile.loading('show');
+        PagingTool.removePagingTags();
+         //采集过程中不可重复点击
+        CollectTool.disableButtons(['#export', '#collect']);
+         
+         $.mobile.loading('show',{
+            text:'稍等，采集中...',
+            textVisible:true,
+            textonly:false
+         });
          $.ajax({
              url: '/ssh/collect',
              success: function(data, textStatus) {
@@ -89,7 +95,7 @@
              //$('#errorPromptView').modal('show').find('div.alert').text('网络连接失败,错误原因:' + msg);
 
          }).complete(function() {
-             $(that).removeClass('ui-state-disabled');
+             
              $.mobile.loading('hide');
              //采集完毕，恢复按钮
              CollectTool.enableButtons(['#export', '#collect']);

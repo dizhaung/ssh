@@ -37,14 +37,14 @@ var CollectTool = (function() {
 			if (buttonIds.length <= 0) return;
 
 			for (var i = 0, size = buttonIds.length; i < size; i++) {
-				$(buttonIds[i]).attr('disabled', true);
+				$(buttonIds[i]).attr('disabled', true).addClass('ui-state-disabled');
 			}
 		},
 		'enableButtons': function(buttonIds) {
 			if (buttonIds.length <= 0) return;
 
 			for (var i = 0, size = buttonIds.length; i < size; i++) {
-				$(buttonIds[i]).attr('disabled', false);
+				$(buttonIds[i]).attr('disabled', false).removeClass('ui-state-disabled');
 			}
 
 		},
