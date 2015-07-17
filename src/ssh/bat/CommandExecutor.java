@@ -20,7 +20,7 @@ import ssh.Shell;
 import ssh.ShellException;
 import ssh.collect.HostCollector;
 import collect.CollectedResource;
-import collect.dwr.DwrPageContext;
+import collect.dwr.ProgressIndicator;
 import collect.model.HintMsg;
 import constants.regex.Regex;
 import constants.regex.Regex.AixRegex;
@@ -148,7 +148,7 @@ public class CommandExecutor {
 				
 				while(resource.getNumber() < maxNum){
 					HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"","当前命令执行进度,已完成"+resource.getNumber()+"个,共"+maxNum+"个");
-					DwrPageContext.realtimeBat(JSONObject.fromObject(msg).toString()); 
+					ProgressIndicator.realtimeBat(JSONObject.fromObject(msg).toString()); 
 					 logger.info(msg);
 					try {
 						resource.wait();
@@ -162,7 +162,7 @@ public class CommandExecutor {
 		}
 		
 		HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"采集完毕","当前命令执行进度");
-		DwrPageContext.realtimeBat(JSONObject.fromObject(msg).toString());
+		ProgressIndicator.realtimeBat(JSONObject.fromObject(msg).toString());
 		logger.info(msg);
 	}
 
@@ -185,7 +185,7 @@ public class CommandExecutor {
 		
 		if(maxNum == 0){
 			HintMsg msg = new HintMsg(0,0,"无","");
-			DwrPageContext.realtimeBat(JSONObject.fromObject(msg).toString());
+			ProgressIndicator.realtimeBat(JSONObject.fromObject(msg).toString());
 			logger.info(msg);
 			return;
 		} 
