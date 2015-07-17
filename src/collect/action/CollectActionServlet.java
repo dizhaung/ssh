@@ -20,7 +20,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import collect.CollectedResource;
-import collect.dwr.DwrPageContext;
+import collect.dwr.ProgressIndicator;
 import collect.model.HintMsg;
 
 import ssh.SSHClient;
@@ -51,14 +51,16 @@ public class CollectActionServlet extends HttpServlet {
 		// TODO Auto-generated method stub
 		//设置返回内容的编码格式
 		resp.setCharacterEncoding("utf-8");
-		
+		String scriptSessionId = req.getParameter("scriptSessionId");
+		ProgressIndicator indicator = new ProgressIndicator();
+		indicator.setScriptSessionId(scriptSessionId);
 		logger.info("---读取主机登录信息文件---");
 		//读取主机登录信息文件
 		List<Host> list = Host.getHostList(FileManager.readFile("/hostConfig.txt"));
 		logger.info("---采集---");
 		//采集
-		this.startCollect(list);
-		getServletContext().setAttribute("hostlist", list);
+		this.startCollect(list,indicator);
+		req.getSession().setAttribute("hostlist", list);
 		PrintWriter out = resp.getWriter();
 		JSONArray o = JSONArray.fromObject(list);
 		out.print(o);
@@ -69,21 +71,21 @@ public class CollectActionServlet extends HttpServlet {
 	 * 采集
 	 * @param list
 	 */
-	private  void startCollect(final List<Host> list){
+	private  void startCollect(final List<Host> list,final ProgressIndicator indicator){
 		//向用户传递采集进度
 		int maxNum = list.size();
 		
 		if(maxNum == 0){
 			HintMsg msg = new HintMsg(0,0,"无","");
-			DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
+			indicator.realtimeCollect(JSONObject.fromObject(msg).toString());
 			HostCollector.logger.info(msg);
 			return;
 		} 
 			//采集负载均衡配置
 		HostCollector.logger.info("------开始采集负载均衡-----");
-		StringBuilder allLoadBalancerFarmAndServerInfo  = LoadBalancerCollector.collectLoadBalancer();
+		StringBuilder allLoadBalancerFarmAndServerInfo  = LoadBalancerCollector.collectLoadBalancer(indicator);
 		HostCollector.logger.info("------开始采集主机-----");
-		this.collectHosts(list,allLoadBalancerFarmAndServerInfo);
+		this.collectHosts(list,allLoadBalancerFarmAndServerInfo,indicator);
 	}
 
 	/**
@@ -91,7 +93,7 @@ public class CollectActionServlet extends HttpServlet {
 	 * @param list	主机列表
 	 * @param allLoadBalancerFarmAndServerInfo   负载均衡上采集到的配置信息
 	 */
-	private  void collectHosts(final List<Host> list,final StringBuilder allLoadBalancerFarmAndServerInfo){
+	private  void collectHosts(final List<Host> list,final StringBuilder allLoadBalancerFarmAndServerInfo,final ProgressIndicator indicator){
 		
 		final int maxNum = list.size(), nowNum = 0;
 		final CollectedResource resource = new CollectedResource(0); 
@@ -156,7 +158,7 @@ public class CollectActionServlet extends HttpServlet {
 				
 				while(resource.getNumber() < maxNum){
 					HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"","当前主机采集进度,已完成"+resource.getNumber()+"个,共"+maxNum+"个");
-					DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
+					indicator.realtimeCollect(JSONObject.fromObject(msg).toString());
 					 
 					logger.info(msg);
 					try {
@@ -171,7 +173,7 @@ public class CollectActionServlet extends HttpServlet {
 		}
 		
 		HintMsg msg = new HintMsg(resource.getNumber(),maxNum,"采集完毕","当前主机采集进度");
-		DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
+		indicator.realtimeCollect(JSONObject.fromObject(msg).toString());
 		logger.info(msg);
 	}
 		

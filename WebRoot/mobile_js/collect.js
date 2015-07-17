@@ -29,6 +29,7 @@
          });
          $.ajax({
              url: '/ssh/collect',
+             data:{scriptSessionId:dwr.engine._scriptSessionId},
              success: function(data, textStatus) {
 
                  /**

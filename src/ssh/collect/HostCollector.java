@@ -12,7 +12,7 @@ import org.apache.commons.logging.LogFactory;
 
 import net.sf.json.JSONObject;
 import collect.CollectedResource;
-import collect.dwr.DwrPageContext;
+import collect.dwr.ProgressIndicator;
 import collect.model.HintMsg;
 
 import host.Host;

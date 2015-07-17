@@ -24,7 +24,7 @@ import ssh.Shell;
 import ssh.ShellException;
 
 import collect.CollectedResource;
-import collect.dwr.DwrPageContext;
+import collect.dwr.ProgressIndicator;
 import collect.model.HintMsg;
 
 public class LoadBalancerCollector {
@@ -34,7 +34,7 @@ public class LoadBalancerCollector {
 	 *  采集负载均衡配置
 	 * @return
 	 */
-	public static StringBuilder collectLoadBalancer(){
+	public static StringBuilder collectLoadBalancer(final ProgressIndicator indicator){
 		
 		final StringBuilder allLoadBalancerFarmAndServerInfo = new StringBuilder();
 	 	//获取负载均衡配置文件
@@ -104,7 +104,7 @@ public class LoadBalancerCollector {
 				logger.info("--------等待负载均衡采集---------");
 				while(resource.getNumber() < loadBalanceMaxNum){
 					HintMsg msg = new HintMsg(resource.getNumber(),loadBalanceMaxNum,"","当前负载均衡配置文件下载进度,已完成"+resource.getNumber()+"个,共"+loadBalanceMaxNum+"个");
-					DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
+					indicator.realtimeCollect(JSONObject.fromObject(msg).toString());
 					logger.info(msg);
 					try {
 						resource.wait();
@@ -117,7 +117,7 @@ public class LoadBalancerCollector {
 			}
 		}
 		HintMsg msg = new HintMsg(resource.getNumber(),loadBalanceMaxNum,"下载完毕","当前负载均衡配置文件下载进度");
-		DwrPageContext.realtimeCollect(JSONObject.fromObject(msg).toString());
+		indicator.realtimeCollect(JSONObject.fromObject(msg).toString());
 		logger.info(msg);
 		return allLoadBalancerFarmAndServerInfo;
 	}

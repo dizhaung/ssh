@@ -20,7 +20,7 @@ public class ShowHostDetailActionServlet extends HttpServlet {
 			throws ServletException, IOException {
 		// TODO Auto-generated method stub
 		 	String ip = req.getParameter("ip");
-		 	List<Host> list =(List<Host>)getServletContext().getAttribute("hostlist");
+		 	List<Host> list =(List<Host>)req.getSession().getAttribute("hostlist");
 		    
 		    Host host = null;
 		    //执行采集前或者执行采集过程中，查看任意一个IP主机的信息，进入错误页面提示没有主机信息
