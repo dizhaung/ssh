@@ -11,6 +11,8 @@ import org.directwebremoting.ScriptSession;
 import org.directwebremoting.ScriptSessionFilter;
 import org.directwebremoting.ScriptSessions;
 import org.directwebremoting.ServerContextFactory;
+import org.directwebremoting.WebContext;
+import org.directwebremoting.WebContextFactory;
 
 
 
@@ -75,15 +77,16 @@ public class ProgressIndicator {
         });
        
     }
-    public  void realtimeBat(final String msg){
-    	String rootPath = ServerContextFactory.get().getContextPath();
+    public static void realtimeBat(final String msg){
+    	WebContext context = WebContextFactory.get();
     	//下面是创建一个javascript脚本 ， 相当于在页面脚本中添加了一句  functionName(msg);   
     	final  ScriptBuffer sb = new ScriptBuffer();  
         sb.appendScript("show(");  
         sb.appendData(msg);  
         sb.appendScript(")");  
       
-        Browser.withPage(rootPath+"/bat.html",new Runnable(){
+        String scriptSesssionId = context.getScriptSession().getId();
+        Browser.withSession(scriptSesssionId,new Runnable(){
 
 			@Override
 			public void run() {

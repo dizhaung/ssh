@@ -8,18 +8,6 @@
 	<!-- <listener>
 		<listener-class>env.ContextEnvInitListener</listener-class>
 	</listener> -->
-	<!-- 执行命令 -->
-	<servlet>
-		<description>执行命令批量主机</description>
-		<servlet-name>bat</servlet-name>
-		<servlet-class>collect.action.BatActionServlet</servlet-class>
-	</servlet>
-	
-	<servlet-mapping>
-		<servlet-name>bat</servlet-name>
-		<url-pattern>/collect/bat</url-pattern>
-	</servlet-mapping>
-	
 	<!-- 执行命令后结果信息导出 -->
 	<servlet>
 		<description>执行命令后结果信息导出</description>

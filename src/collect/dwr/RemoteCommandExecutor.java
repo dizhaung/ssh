@@ -1,4 +1,4 @@
-package collect.action;
+package collect.dwr;
 
 import host.FileManager;
 import host.Host;
@@ -12,39 +12,35 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import net.sf.json.JSONArray;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.directwebremoting.ScriptSession;
+import org.directwebremoting.WebContext;
+import org.directwebremoting.WebContextFactory;
 
 import ssh.bat.CommandExecutor;
 
-public class BatActionServlet extends HttpServlet {
+public class RemoteCommandExecutor {
 
-	private static Log logger = LogFactory.getLog(BatActionServlet.class);
-	@Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-			throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		doPost(req,resp);
-	}
-
-	@Override
-	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-			throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		
+	private static Log logger = LogFactory.getLog(RemoteCommandExecutor.class);
+	
+	
+	public String batCommand(final String command){
 		//设置返回内容的编码格式
-		resp.setCharacterEncoding("utf-8");
-		String command = req.getParameter("command");
-		
+		WebContext context =WebContextFactory.get();
+		ScriptSession scriptSession = context.getScriptSession();
 		//读取主机配置文件
 		logger.info("---读取主机登录信息文件---");
 		/**
 		 * 第一次执行命令需要读取主机登录信息文件，后续的命令执行不重复读取配置文件，并且不会重复采集设备基本信息
+		 * 但是当再次刷新页面的时候，执行主机命令的批处理则需要读取主机配置文件
+		 * 因为，刷新页面，将会重新创建一个ScriptSession
 		 */
-		List<TinyHost> list  = (List<TinyHost>)req.getSession().getAttribute("tinyhostlist");
+		List<TinyHost> list  = (List<TinyHost>)scriptSession.getAttribute("tinyhostlist");
 		boolean isNotEverRead = false;
 		if(list == null){
 			//读取主机登录信息文件
@@ -53,12 +49,10 @@ public class BatActionServlet extends HttpServlet {
 		}
 		//执行命令
 		CommandExecutor.startBat(list,command,isNotEverRead);
-		req.getSession().setAttribute("tinyhostlist", list);
-		PrintWriter out = resp.getWriter();
-		JSONArray o = JSONArray.fromObject(list);
-		out.print(o);
-		out.flush();
+		scriptSession.setAttribute("tinyhostlist", list);
 		
+		JSONArray commandResults = JSONArray.fromObject(list);
+		return commandResults.toString();
 	}
 
 }
