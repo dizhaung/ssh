@@ -73,6 +73,12 @@
          <url-pattern>/dwr/*</url-pattern>  
     </servlet-mapping>
     
+    <servlet>
+    	<description>初始化ScriptSession监听</description>
+    	<servlet-name>scriptSessionListenerInit</servlet-name>
+    	<servlet-class>collect.dwr.ScriptSessionListenerServlet</servlet-class>
+    	<load-on-startup>2</load-on-startup>
+    </servlet>
 	
   	<welcome-file-list>
     <welcome-file>index.jsp</welcome-file>

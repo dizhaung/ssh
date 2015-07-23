@@ -13,6 +13,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.directwebremoting.ScriptSession;
+import org.directwebremoting.WebContextFactory;
 
 import net.sf.json.JSONObject;
 import ssh.SSHClient;
@@ -40,10 +42,14 @@ public class CommandExecutor {
 		final int maxNum = list.size(), nowNum = 0;
 		final CollectedResource resource = new CollectedResource(0); 
 		if(list.size() > 0){
+			//在ScriptSession中存储命令批处理线程组，当关闭或者刷新页面的时候，销毁批处理线程组中的正在执行的线程
+			ScriptSession scriptSession = WebContextFactory.get().getScriptSession();
+			ThreadGroup batThreadGroup = new ThreadGroup(scriptSession.getId());
+			scriptSession.setAttribute("batThreadGroup", batThreadGroup);
 			for (Iterator<TinyHost> it = list.iterator();it.hasNext();) {
 				final TinyHost h = it.next();
 				
-				Thread thread = new Thread(new Runnable(){
+				Thread thread = new Thread(batThreadGroup,new Runnable(){
 	
 					@Override
 					public void run() {
