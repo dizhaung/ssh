@@ -46,7 +46,7 @@ public class ScriptSessionListenerServlet extends HttpServlet {
 			public void sessionCreated(ScriptSessionEvent event) {
 				// TODO Auto-generated method stub
 				ScriptSession scriptSession = event.getSession();
-				logger.info("create "+scriptSession.getId());
+				logger.info("create ScriptSessioin "+scriptSession.getId());
 			}
 
 			/**
@@ -57,7 +57,7 @@ public class ScriptSessionListenerServlet extends HttpServlet {
 			public void sessionDestroyed(ScriptSessionEvent event) {
 				// TODO Auto-generated method stub
 				ScriptSession scriptSession = event.getSession();
-				logger.info("destroy "+scriptSession.getId());
+				logger.info("destroy ScriptSessioin "+scriptSession.getId());
 				ThreadGroup batThreadGroup  = (ThreadGroup)scriptSession.getAttribute("batThreadGroup");
 				if(batThreadGroup != null&&!batThreadGroup.isDestroyed()){
 					Thread[] threads = new Thread[batThreadGroup.activeCount()];
